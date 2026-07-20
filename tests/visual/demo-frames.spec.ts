@@ -27,6 +27,14 @@ const NAMED_REGRESSION_IMAGES = [
   ['artifacts/regression/07-type-protection-detail.png', 360],
   ['artifacts/regression/08-explicit-block.png', 945],
 ] as const;
+const SUBMISSION_IMAGES = [
+  ['artifacts/submission/01-project-overview.png', 45, '.overview-dashboard'],
+  ['artifacts/submission/02-problem-gap.png', 150, '.gap-comparison'],
+  ['artifacts/submission/03-type-protection-route.png', 480, '.workbench-grid'],
+  ['artifacts/submission/04-output-withheld.png', 610, '.inspection-dashboard'],
+  ['artifacts/submission/05-verified-result.png', 750, '[data-testid="verified-result"]'],
+  ['artifacts/submission/06-innovation-and-evaluation.png', 855, '.finish-view'],
+] as const;
 
 test.use({
   viewport: {width: 1_920, height: 1_080},
@@ -123,3 +131,27 @@ test('named regression images preserve the required file contract', async () => 
     expect(Buffer.from(artifact.data).equals(Buffer.from(baseline.data))).toBe(true);
   }
 });
+
+for (const [relativePath, frame, selector] of SUBMISSION_IMAGES) {
+  test(`${relativePath} maps semantically and pixel-exactly to frame ${frame}`, async ({page}) => {
+    await page.emulateMedia({reducedMotion: 'no-preference', colorScheme: 'light'});
+    await page.goto('?record=1');
+    await page.waitForFunction(() => '__FPG_RECORDING_V1__' in window);
+    await page.evaluate(
+      async (value) => window.__FPG_RECORDING_V1__!.setFrame(value),
+      frame,
+    );
+    await expect(page.locator(selector)).toBeVisible();
+    await page.mouse.move(1_919, 1_079);
+    const liveBytes = await page.getByTestId('demo-stage').screenshot();
+    const artifactPath = path.join(ROOT, relativePath);
+    const artifactBytes = await readFile(artifactPath);
+    const artifact = PNG.sync.read(artifactBytes);
+
+    expect((await stat(artifactPath)).size).toBeGreaterThan(100_000);
+    expect({width: artifact.width, height: artifact.height}).toEqual({width: 1_920, height: 1_080});
+    if (EXACT_RGBA_BASELINE) {
+      expect(Buffer.from(PNG.sync.read(liveBytes).data).equals(Buffer.from(artifact.data))).toBe(true);
+    }
+  });
+}
