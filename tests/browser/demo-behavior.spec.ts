@@ -95,7 +95,7 @@ test('starts motionless, then shows the user-triggered countdown', async ({page}
   await expect(page.getByTestId('countdown')).toHaveText('3');
 });
 
-test('keeps verified result absent until inspection and withholds the block branch', async ({
+test('keeps result content absent while showing six inspection checks and withholds the block branch', async ({
   page,
 }) => {
   await page.setViewportSize({width: 1_920, height: 1_080});
@@ -104,6 +104,13 @@ test('keeps verified result absent until inspection and withholds the block bran
   await bridge.setFrame(610);
   await expect(page.getByTestId('inspection-dashboard')).toBeVisible();
   await expect(page.locator('[data-testid="inspection-check"]')).toHaveCount(6);
+  await expect(page.locator('.inspection-progress-list .is-complete')).toHaveCount(3);
+  await expect(page.locator('.inspection-check-table .is-complete')).toHaveCount(3);
+  await expect(page.locator('.inspection-progress-list .is-active')).toHaveCount(1);
+  await expect(page.locator('.inspection-check-table .is-active')).toHaveCount(1);
+  await expect(page.locator('.inspection-progress-list li:not(.is-complete):not(.is-active)')).toHaveCount(2);
+  await expect(page.locator('.inspection-detail-card__heading')).toContainText('3/6 통과');
+  await expect(page.locator('.inspection-summary')).toContainText('3 통과');
   await expect(page.getByTestId('inspection-gate')).toBeVisible();
   await expect(page.getByText('정확히 연결됨 → 결과 공개')).toBeVisible();
   await expect(page.getByText('형태가 달라짐 → 결과 미공개')).toBeVisible();

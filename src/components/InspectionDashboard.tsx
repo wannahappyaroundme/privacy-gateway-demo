@@ -6,7 +6,7 @@ type InspectionDashboardProps = {
   inspection: InspectionState;
 };
 
-const PRE_DISCLOSURE_THRESHOLDS = [0.1, 0.2, 0.3, 0.4, 0.5] as const;
+const PRE_DISCLOSURE_THRESHOLDS = [1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6] as const;
 
 export function InspectionDashboard({inspection}: InspectionDashboardProps) {
   const completedCount = inspection.complete
