@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 import {expectedNoticeDocument} from './make-third-party-notices.mjs';
+import {noticeDifferencePreview} from './dependency-notice-utils.mjs';
 import {
   EXPECTED_CSP,
   actionPinFindings,
@@ -135,7 +136,9 @@ async function main() {
 
   const noticePath = path.join(ROOT, 'THIRD_PARTY_NOTICES.md');
   const currentNotice = await readFile(noticePath, 'utf8');
-  if (currentNotice !== (await expectedNoticeDocument())) {
+  const expectedNotice = await expectedNoticeDocument();
+  if (currentNotice !== expectedNotice) {
+    process.stderr.write(noticeDifferencePreview(currentNotice, expectedNotice));
     findings.push(finding('THIRD_PARTY_NOTICES.md', 'dependency-notice-out-of-date'));
   }
 

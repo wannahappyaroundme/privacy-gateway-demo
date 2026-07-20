@@ -189,8 +189,8 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `acorn-jsx@5.3.2` | 개발 | MIT | `LICENSE`, `cfa72b62b9ae173078823a3796b25c027a9071046a263beddf966df67018ce06` | Copyright (C) 2012-2017 by Ingvar Stepanyan |
 | `acorn@8.17.0` | 개발 | MIT | `LICENSE`, `76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7` | Copyright (C) 2012-2022 by various contributors (see AUTHORS) |
 | `ajv@6.15.0` | 개발 | MIT | `LICENSE`, `e85e131fa4ed25538ff1f4962ced1fb6f68b079bd9164a790597a0f30b8fd030` | Copyright (c) 2015-2017 Evgeny Poberezkin |
-| `ansi-regex@5.0.1` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
-| `ansi-styles@5.2.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `ansi-regex@5.0.1` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `ansi-styles@5.2.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
 | `aria-query@5.3.0` | 개발 | Apache-2.0 | `LICENSE`, `c8df456c7ccba74b959087dff494d4ac2a12dfb0400c08b46b2494a08a000567` | copyright notice that is included in or attached to the work; copyright license to reproduce, prepare Derivative Works of,; Copyright 2020 A11yance |
 | `aria-query@5.3.2` | 개발 | Apache-2.0 | `LICENSE`, `c8df456c7ccba74b959087dff494d4ac2a12dfb0400c08b46b2494a08a000567` | copyright notice that is included in or attached to the work; copyright license to reproduce, prepare Derivative Works of,; Copyright 2020 A11yance |
 | `assertion-error@2.0.1` | 개발 | MIT | `LICENSE`, `2130216d5ab4c02134f8247f32999feda0abe1eaf028218baeac445c19ce4cea` | Copyright (c) 2013 Jake Luer jake@qualiancy.com (http://qualiancy.com) |
@@ -211,7 +211,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `debug@4.4.3` | 개발 | MIT | `LICENSE`, `3a61c6c96caf5c1d9b623fb9b04c822b783dfcb78aa7e49c76a3f643e6ed7f95` | Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;; Copyright (c) 2018-2021 Josh Junon |
 | `decimal.js@10.6.0` | 개발 | MIT | `package-lock.json#packages`, `5df4553321b18529866de22c1fcec461b4f9bcb13aa3d96a56c0ebb712c90deb` | SPDX declaration: MIT; Registry integrity: sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg== |
 | `deep-is@0.1.4` | 개발 | MIT | `LICENSE`, `f2042f3634c4136d06b5139c9c6aefb81a3a462b514548bc1845953233dfba98` | Copyright (c) 2012, 2013 Thorsten Lorenz &lt;thlorenz@gmx.de&gt;; Copyright (c) 2012 James Halliday &lt;mail@substack.net&gt;; Copyright (c) 2009 Thomas Robinson &lt;280north.com&gt;; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER |
-| `dequal@2.0.3` | 개발 | MIT | `LICENSE`, `306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae` | Copyright (c) Luke Edwards &lt;luke.edwards05@gmail.com&gt; (lukeed.com) |
+| `dequal@2.0.3` | 개발 | MIT | `license`, `306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae` | Copyright (c) Luke Edwards &lt;luke.edwards05@gmail.com&gt; (lukeed.com) |
 | `detect-libc@2.1.2` | 실행 | Apache-2.0 | `LICENSE`, `b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1` | copyright notice that is included in or attached to the work; copyright license to reproduce, prepare Derivative Works of,; Copyright {yyyy} {name of copyright owner} |
 | `dom-accessibility-api@0.5.16` | 개발 | MIT | `LICENSE.md`, `0ffe67fe630169de46df2d29dc18f5857b4c98f0f95b0cd9e3c21fef51f9a9b8` | Copyright (c) 2020 Sebastian Silbermann |
 | `dom-accessibility-api@0.6.3` | 개발 | MIT | `LICENSE.md`, `0ffe67fe630169de46df2d29dc18f5857b4c98f0f95b0cd9e3c21fef51f9a9b8` | Copyright (c) 2020 Sebastian Silbermann |
@@ -219,8 +219,8 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `enhanced-resolve@5.24.2` | 실행 | MIT | `LICENSE`, `9068a8782d2fb4c6e432cfa25334efa56f722822180570802bf86e71b6003b1e` | Copyright JS Foundation and other contributors |
 | `entities@8.0.0` | 개발 | BSD-2-Clause | `LICENSE`, `cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164` | Copyright (c) Felix Böhm |
 | `es-module-lexer@2.3.1` | 개발 | MIT | `LICENSE`, `8a4b6c44eebfb026d23719a348145a661a555568dbfdc11618ff2d0dd9306b00` | Copyright (C) 2018-2022 Guy Bedford |
-| `escalade@3.2.0` | 개발 | MIT | `LICENSE`, `9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97` | Copyright (c) Luke Edwards &lt;luke.edwards05@gmail.com&gt; (lukeed.com) |
-| `escape-string-regexp@4.0.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `escalade@3.2.0` | 개발 | MIT | `license`, `9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97` | Copyright (c) Luke Edwards &lt;luke.edwards05@gmail.com&gt; (lukeed.com) |
+| `escape-string-regexp@4.0.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `eslint-plugin-react-hooks@7.1.1` | 개발 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
 | `eslint-plugin-react-refresh@0.5.3` | 개발 | MIT | `LICENSE`, `fba570176c68f716676e04cad6c39fb56b763e44fc11be22fe6863ff19092a9b` | Copyright (c) Arnaud Barré (https://github.com/ArnaudBarre) |
 | `eslint-scope@9.1.2` | 개발 | BSD-2-Clause | `LICENSE`, `d3a724e2ed749f172ff70b62a1d0631b7d4b0ea273782365a3464d4e2d6b6dbd` | Copyright JS Foundation and other contributors, https://js.foundation; Copyright (C) 2012-2013 Yusuke Suzuki (twitter: @Constellation) and other contributors. |
@@ -228,7 +228,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `eslint-visitor-keys@5.0.1` | 개발 | Apache-2.0 | `LICENSE`, `d8bf34ff6d190640a01e7704ad78253fc181bc128949d71273fbbaa12f33c0b4` | copyright notice that is included in or attached to the work; copyright license to reproduce, prepare Derivative Works of,; Copyright contributors |
 | `eslint@10.7.0` | 개발 | MIT | `LICENSE`, `3b6be04f862a077a4b97929dbf247299360824d9365f8603c263769303ace18c` | Copyright OpenJS Foundation and other contributors, &lt;www.openjsf.org&gt; |
 | `espree@11.2.0` | 개발 | BSD-2-Clause | `LICENSE`, `26c95937762a3dc17a3934a0a2773c70259ba4bf28dab713c225e4af8eb9d349` | Copyright (c) Open JS Foundation |
-| `esquery@1.7.0` | 개발 | BSD-3-Clause | `LICENSE.txt`, `ac68116ae73740de4190892f334992e449a124600924ec761e64319d3aac9e6e` | Copyright (c) 2013, Joel Feenstra |
+| `esquery@1.7.0` | 개발 | BSD-3-Clause | `license.txt`, `ac68116ae73740de4190892f334992e449a124600924ec761e64319d3aac9e6e` | Copyright (c) 2013, Joel Feenstra |
 | `esrecurse@4.3.0` | 개발 | BSD-2-Clause | `package-lock.json#packages`, `aed1e6cf3404651ce46c8f9172ebc1792138f750eb6f1bb6965300faa0f8b9a4` | SPDX declaration: BSD-2-Clause; Registry integrity: sha512-KmfKL3b6G+RXvP8N1vr3Tq1kL/oCFgn2NYXEtqP8/L3pKapUA4G8cFVaoF3SU323CD4XypR/ffioHmkti6/Tag== |
 | `estraverse@5.3.0` | 개발 | BSD-2-Clause | `package-lock.json#packages`, `0e423f67e4424d8d1b8ef0f91d8b2465890055e95516cfce98b2830c166a8480` | SPDX declaration: BSD-2-Clause; Registry integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA== |
 | `estree-walker@3.0.3` | 개발 | MIT | `LICENSE`, `8a6dcbabe7179f9c8489c08a7d874d0f1e093ae7449e03756ccf87cb9d0e296e` | Copyright (c) 2015-20 [these people](https://github.com/Rich-Harris/estree-walker/graphs/contributors) |
@@ -239,7 +239,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `fast-levenshtein@2.0.6` | 개발 | MIT | `LICENSE.md`, `942a98cb8846a6354266193f173c1354615827fbb7d67f68399599dff12c4d6a` | Copyright (c) 2013 [Ramesh Nair](http://www.hiddentao.com/) |
 | `fdir@6.5.0` | 실행 | MIT | `LICENSE`, `9a39f2aadab11a3697edd668ff2d8ad885b649737b7ab4d3bf12b34e5ada0c86` | Copyright 2023 Abdullah Atta |
 | `file-entry-cache@8.0.0` | 개발 | MIT | `LICENSE`, `a0e2f73971f663b49d3c66cc6749fc88de0f475680ccf5b980a9cbcc0c52490f` | Copyright (c) Roy Riojas &amp; Jared Wray |
-| `find-up@5.0.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `find-up@5.0.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `flat-cache@4.0.1` | 개발 | MIT | `LICENSE`, `a6a23fb76d91d98669f5ed6eb58213df594ab2d56c9e981ae021b194e3d662a7` | Copyright (c) Roy Riojas and Jared Wray |
 | `flatted@3.4.2` | 개발 | ISC | `LICENSE`, `148718606d34f467fd08a2176bb4c1ab275f999576f779368503d8d3e3642861` | Copyright (c) 2018-2020, Andrea Giammarchi, @WebReflection; copyright notice and this permission notice appear in all copies. |
 | `framer-motion@12.42.2` | 실행 | MIT | `LICENSE.md`, `5ff46083b88563822b0560dd6221ab89d2f74bc97a52d4c97a75020fd62c6f32` | Copyright (c) 2018 Framer B.V. |
@@ -247,7 +247,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `fsevents@2.3.3` | 실행 | MIT | `package-lock.json#packages`, `30e164ba008e191b4b32ee1a012f02324434ca829fed354a387e595750e9eddb` | SPDX declaration: MIT; Registry integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw== |
 | `gensync@1.0.0-beta.2` | 개발 | MIT | `LICENSE`, `e3a956681ee067f971ac413994171b3d90ca801ec6324e76c9c55366cfe31cb0` | Copyright 2018 Logan Smyth &lt;loganfsmyth@gmail.com&gt; |
 | `glob-parent@6.0.2` | 개발 | ISC | `LICENSE`, `fc68eb8f1c8e1d6b8be50f3c177927e24791cae7dc251e6253a012f37926a30c` | Copyright (c) 2015, 2019 Elan Shanker, 2021 Blaine Bublitz &lt;blaine.bublitz@gmail.com&gt;, Eric Schoffstall &lt;yo@contra.io&gt; and other contributors; copyright notice and this permission notice appear in all copies. |
-| `globals@17.7.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `globals@17.7.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `graceful-fs@4.2.11` | 실행 | ISC | `LICENSE`, `f65c5d9f22a317b2a10803bd1868461ce6499c2ed7217bc80c0cc772a748789c` | Copyright (c) 2011-2022 Isaac Z. Schlueter, Ben Noordhuis, and Contributors; copyright notice and this permission notice appear in all copies. |
 | `hermes-estree@0.25.1` | 개발 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
 | `hermes-parser@0.25.1` | 개발 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
@@ -255,7 +255,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `ignore@5.3.2` | 개발 | MIT | `package-lock.json#packages`, `6b1ac8535de94d668f559b198dd2c359940c029d409ccf6bac58a91c635d2ee8` | SPDX declaration: MIT; Registry integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g== |
 | `ignore@7.0.6` | 개발 | MIT | `package-lock.json#packages`, `4fe0660c1a29242fcc7f902c0437d1fd0e65fdb4ac48302fe897cc05223f446a` | SPDX declaration: MIT; Registry integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw== |
 | `imurmurhash@0.1.4` | 개발 | MIT | `package-lock.json#packages`, `00bde424889709114c17ada070647c7fca69306c0c9d4ab7ee6f98c97a560bc5` | SPDX declaration: MIT; Registry integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA== |
-| `indent-string@4.0.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `indent-string@4.0.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
 | `is-extglob@2.1.1` | 개발 | MIT | `LICENSE`, `73b5283588baa142c5baaef5f56d3e8fdea7a30b214e8c5737e87640f882453a` | Copyright (c) 2014-2016, Jon Schlinkert |
 | `is-glob@4.0.3` | 개발 | MIT | `LICENSE`, `4cd903859549d4b20b571041f96dfae1136ed079c476126268f9d7cc1b611150` | Copyright (c) 2014-2017, Jon Schlinkert. |
 | `is-potential-custom-element-name@1.0.1` | 개발 | MIT | `package-lock.json#packages`, `b8798fe619712678622713300b80f73e8bc211424e0339b55180fa55a3bcb9b0` | SPDX declaration: MIT; Registry integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ== |
@@ -282,28 +282,28 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `lightningcss-win32-arm64-msvc@1.32.0` | 실행 | MPL-2.0 | `package-lock.json#packages`, `f85efce2586637af47ddf60e9c0de9def1eea907d1286888f6e5562302742f26` | SPDX declaration: MPL-2.0; Registry integrity: sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw== |
 | `lightningcss-win32-x64-msvc@1.32.0` | 실행 | MPL-2.0 | `package-lock.json#packages`, `a157defb5f1a8c5c6990a266a6f3bd2312199586d83ab51495a869106b533d17` | SPDX declaration: MPL-2.0; Registry integrity: sha512-Amq9B/SoZYdDi1kFrojnoqPLxYhQ4Wo5XiL8EVJrVsB8ARoC1PWW6VGtT0WKCemjy8aC+louJnjS7U18x3b06Q== |
 | `lightningcss@1.32.0` | 실행 | MPL-2.0 | `LICENSE`, `5eba353fe5076ac3432177f8ab1cf75e3afcd0584251e37c3bfead5f447d040e` | Author: lightningcss |
-| `locate-path@6.0.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `locate-path@6.0.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `lru-cache@11.5.2` | 개발 | BlueOak-1.0.0 | `LICENSE.md`, `8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004` | copyright in it. |
 | `lru-cache@5.1.1` | 개발 | ISC | `LICENSE`, `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b` | Copyright (c) Isaac Z. Schlueter and Contributors; copyright notice and this permission notice appear in all copies. |
 | `lz-string@1.5.0` | 개발 | MIT | `LICENSE`, `433fc9dfe659dbfb1e91eed8351f13651e97bfa3ac6d03394c3d63f61d4bbc80` | Copyright (c) 2013 pieroxy |
 | `magic-string@0.30.21` | 실행 | MIT | `LICENSE`, `1cbe51b907662f6cb1492b16c359384a595180bf0e4d101603ed525e75c4e484` | Copyright 2018 Rich Harris |
 | `mdn-data@2.27.1` | 개발 | CC0-1.0 | `LICENSE`, `36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673` | Copyright and Related Rights in the Work and the meaning and intended legal; Copyright and Related Rights in the Work or (ii) assert any associated claims |
-| `min-indent@1.0.1` | 개발 | MIT | `LICENSE`, `9638fa87f845af6cecc56fab498c1f74f4a98522d3b53377bedcbdb44b5a8dcc` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com), James Kyle &lt;me@thejameskyle.com&gt; (thejameskyle.com) |
+| `min-indent@1.0.1` | 개발 | MIT | `license`, `9638fa87f845af6cecc56fab498c1f74f4a98522d3b53377bedcbdb44b5a8dcc` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com), James Kyle &lt;me@thejameskyle.com&gt; (thejameskyle.com) |
 | `minimatch@10.2.5` | 개발 | BlueOak-1.0.0 | `LICENSE.md`, `2c7c5d22ed5a8ee968c64757710979afcd77438c48b4a265b94e615babd8a901` | copyright in it. |
 | `motion-dom@12.42.2` | 실행 | MIT | `LICENSE.md`, `1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1` | Copyright (c) 2024 [Motion](https://motion.dev) B.V. |
 | `motion-utils@12.39.0` | 실행 | MIT | `LICENSE.md`, `1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1` | Copyright (c) 2024 [Motion](https://motion.dev) B.V. |
 | `motion@12.42.2` | 실행 | MIT | `LICENSE.md`, `1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1` | Copyright (c) 2024 [Motion](https://motion.dev) B.V. |
-| `ms@2.1.3` | 개발 | MIT | `LICENSE.md`, `1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801` | Copyright (c) 2020 Vercel, Inc. |
+| `ms@2.1.3` | 개발 | MIT | `license.md`, `1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801` | Copyright (c) 2020 Vercel, Inc. |
 | `nanoid@3.3.16` | 실행 | MIT | `LICENSE`, `da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987` | Copyright 2017 Andrey Sitnik &lt;andrey@sitnik.ru&gt;; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER |
 | `natural-compare@1.4.0` | 개발 | MIT | `package-lock.json#packages`, `f48c705422fa563840df77a37ab410d99c13ba4a46a5011823e6b8465dcf5739` | SPDX declaration: MIT; Registry integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw== |
 | `node-releases@2.0.51` | 개발 | MIT | `LICENSE`, `3706296ed611888111ceccc1dff4712844dea4bde0b185c82d718c3b69895abe` | Copyright (c) 2017 Sergey Rubanov (https://github.com/chicoxyzzy) |
 | `obug@2.1.4` | 개발 | MIT | `LICENSE`, `ee48679d379ca6b4493d5e231094d85f818dd9be40b1a4f234fb7ff657ee35d9` | Copyright © 2025-PRESENT Kevin Deng (https://github.com/sxzz); Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;; Copyright (c) 2018-2021 Josh Junon |
 | `optionator@0.9.4` | 개발 | MIT | `LICENSE`, `b9eb082c39fe245e38793699074c394c43a722c51fce031c3c165cb92a31035c` | Copyright (c) George Zahariev |
-| `p-limit@3.1.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
-| `p-locate@5.0.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `p-limit@3.1.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `p-locate@5.0.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `parse5@8.0.1` | 개발 | MIT | `LICENSE`, `8c535800331e1e4439835555b3f9edc7fe9dee2fab0d8bbbd5a982e8b8343d4d` | Copyright (c) 2013-2019 Ivan Nikulin (ifaaan@gmail.com, https://github.com/inikulin) |
-| `path-exists@4.0.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
-| `path-key@3.1.1` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `path-exists@4.0.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `path-key@3.1.1` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
 | `pathe@2.0.3` | 개발 | MIT | `LICENSE`, `52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b` | Copyright (c) Pooya Parsa &lt;pooya@pi0.io&gt; - Daniel Roe &lt;daniel@roe.dev&gt;; Copyright Joyent, Inc. and other Node contributors.; Copyright (c) 2023-present Fabio Spampinato |
 | `picocolors@1.1.1` | 실행 | ISC | `LICENSE`, `6582629e2979466878f6014313dcc2f3756c9616148682227ce3063dde310750` | Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov; copyright notice and this permission notice appear in all copies. |
 | `picomatch@4.0.5` | 실행 | MIT | `LICENSE`, `d0cd141b0c322fded5dfad1d4645bb2fedfc05b7321fe1009469638190d59ef9` | Copyright (c) 2017-present, Jon Schlinkert. |
@@ -319,20 +319,20 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `react-dom@19.2.7` | 실행 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
 | `react-is@17.0.2` | 개발 | MIT | `LICENSE`, `52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85` | Copyright (c) Facebook, Inc. and its affiliates. |
 | `react@19.2.7` | 실행 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
-| `redent@3.0.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
-| `require-from-string@2.0.2` | 개발 | MIT | `LICENSE`, `6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f` | Copyright (c) Vsevolod Strukchinsky &lt;floatdrop@gmail.com&gt; (github.com/floatdrop) |
+| `redent@3.0.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `require-from-string@2.0.2` | 개발 | MIT | `license`, `6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f` | Copyright (c) Vsevolod Strukchinsky &lt;floatdrop@gmail.com&gt; (github.com/floatdrop) |
 | `rolldown@1.1.5` | 실행 | MIT | `LICENSE`, `23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734` | Copyright (c) 2024-present VoidZero Inc. &amp; Contributors |
 | `saxes@6.0.0` | 개발 | ISC | `package-lock.json#packages`, `198540add1c28f935c5edf73bf2f2b2344ac54f126810568d00dbc7c27eed6bc` | SPDX declaration: ISC; Registry integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA== |
 | `scheduler@0.27.0` | 실행 | MIT | `LICENSE`, `da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93` | Copyright (c) Meta Platforms, Inc. and affiliates. |
 | `semver@6.3.1` | 개발 | ISC | `LICENSE`, `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b` | Copyright (c) Isaac Z. Schlueter and Contributors; copyright notice and this permission notice appear in all copies. |
 | `semver@7.8.5` | 개발 | ISC | `LICENSE`, `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b` | Copyright (c) Isaac Z. Schlueter and Contributors; copyright notice and this permission notice appear in all copies. |
-| `shebang-command@2.0.0` | 개발 | MIT | `LICENSE`, `69dee148a2cc470554dfa7142e830662062394d0fe67cddd379aba90dc60d6b3` | Copyright (c) Kevin Mårtensson &lt;kevinmartensson@gmail.com&gt; (github.com/kevva) |
-| `shebang-regex@3.0.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `shebang-command@2.0.0` | 개발 | MIT | `license`, `69dee148a2cc470554dfa7142e830662062394d0fe67cddd379aba90dc60d6b3` | Copyright (c) Kevin Mårtensson &lt;kevinmartensson@gmail.com&gt; (github.com/kevva) |
+| `shebang-regex@3.0.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
 | `siginfo@2.0.0` | 개발 | ISC | `LICENSE`, `3bdddf0b9b08aaa2fe4365b803fc958ed32c0597ca0bd727be8d9fcb8b248d18` | Copyright (c) 2017, Emil Bay &lt;github@tixz.dk&gt;; copyright notice and this permission notice appear in all copies. |
 | `source-map-js@1.2.1` | 실행 | BSD-3-Clause | `LICENSE`, `6cb0631f71c7749763fd3dd1d5bee52dd1070ec17f2edc1710079ad070bd2fbd` | Copyright (c) 2009-2011, Mozilla Foundation and contributors |
 | `stackback@0.0.2` | 개발 | MIT | `package-lock.json#packages`, `5bec882a9277ea05b42e8288a05ff968a769395b5afd2e34892d12fce40e6dfd` | SPDX declaration: MIT; Registry integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw== |
 | `std-env@4.2.0` | 개발 | MIT | `LICENCE`, `a6f36438e46fb911859f3b9c4cad045ba64e1af3d8f4512c60258fa2d7552d28` | Copyright (c) Pooya Parsa &lt;pooya@pi0.io&gt; |
-| `strip-indent@3.0.0` | 개발 | MIT | `LICENSE`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
+| `strip-indent@3.0.0` | 개발 | MIT | `license`, `48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) |
 | `symbol-tree@3.2.4` | 개발 | MIT | `LICENSE`, `9ea1eccdabe469767a9edb9249a840b2461cf91b2434bf8a3e2fc1f414311cb1` | Copyright (c) 2015 Joris van der Wel |
 | `tailwindcss@4.3.3` | 실행 | MIT | `LICENSE`, `60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985` | Copyright (c) Tailwind Labs, Inc. |
 | `tapable@2.3.3` | 실행 | MIT | `LICENSE`, `824ef6c33ae5ecbbab65d37f2b37da2bfc81d76cf7676ec0f59d00a0a38bdb75` | Copyright JS Foundation and other contributors |
@@ -365,7 +365,7 @@ The source zip, source OTF files, temporary renamed OTF files, and temporary gly
 | `xml-name-validator@5.0.0` | 개발 | Apache-2.0 | `LICENSE.txt`, `a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9` | copyright notice that is included in or attached to the work; copyright license to reproduce, prepare Derivative Works of, |
 | `xmlchars@2.2.0` | 개발 | MIT | `LICENSE`, `45d196313c2647d313cc65ca9b093d2d6974b64d35ee7346f2c60c9d518dff2c` | Copyright Louis-Dominique Dubeau and contributors to xmlchars; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER |
 | `yallist@3.1.1` | 개발 | ISC | `LICENSE`, `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b` | Copyright (c) Isaac Z. Schlueter and Contributors; copyright notice and this permission notice appear in all copies. |
-| `yocto-queue@0.1.0` | 개발 | MIT | `LICENSE`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
+| `yocto-queue@0.1.0` | 개발 | MIT | `license`, `5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3` | Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (https://sindresorhus.com) |
 | `zod-validation-error@4.0.2` | 개발 | MIT | `LICENSE`, `03cc9a630489a2544b799548a0e8b134f382fe09fa06dc22b339091b28b8f4a8` | Copyright 2022 Causaly, Inc &lt;front-end@causaly.com&gt; |
 | `zod@4.4.3` | 실행 | MIT | `LICENSE`, `3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8` | Copyright (c) 2025 Colin McDonnell |
 

@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "status": "public-release-approved",
+  "status": "local-preflight-only",
   "fixtureSha256": "eb06cc37bdca9203ac726c5e9751dfc2ab4a41424a4f7321c5b3833250b33b2c",
   "copySha256": "f8e74c8e0aba6cae75d758b36db98e11e984f4e50f028110e4a8989cd4936288",
-  "approvedSourceSha256": "6bf431a65ce29d3ccc7c1e37a269b083ec89feb2e5fc646e73475224a39c200f",
-  "reviewer": "Owner approval with independent Task 9 audit",
-  "approvedAt": "2026-07-20T12:07:58.000Z"
+  "approvedSourceSha256": "f197b7ec8d513b28d37210b583f97314b849d38c17eb60cdca0f898e8730ebfb",
+  "reviewer": null,
+  "approvedAt": null
 }
