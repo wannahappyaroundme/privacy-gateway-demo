@@ -542,13 +542,21 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   .workbench-grid > :last-child { grid-column: auto; }
   .inspection-dashboard > .inspection-gate { grid-column: auto; }
   .protection-column { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
-  .step-rail { height: auto; overflow-x: auto; }
-  .step-rail ol { min-width: 820px; height: 70px; }
+  .step-rail { height: auto; overflow: hidden; }
+  .step-rail ol { min-width: 0; height: 70px; }
   .playback-bar { align-items: stretch; flex-direction: column; }
   .playback-bar__buttons { justify-content: flex-start; }
   .roundtrip-flow { grid-template-columns: 1fr 1fr; }
   .roundtrip-flow li:nth-child(2) b { display: none; }
   .scope-notice { grid-template-columns: 1fr; gap: 8px; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .step-rail ol { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .step-rail__item { display: none; }
+  .step-rail__item.is-adjacent { display: flex; }
+  .step-rail__item::after { display: none; }
+  .step-rail__item button > span:last-child { display: inline; }
 }
 
 @media (max-width: 767px) {

@@ -424,7 +424,7 @@ for (const viewport of [
     if (viewport.width < 768) {
       await page.getByRole('button', {name: '다음'}).dispatchEvent('click');
     } else {
-      await page.getByRole('button', {name: '확인이 필요한 경우'}).dispatchEvent('click');
+      await page.getByRole('button', {name: '확인이 필요한 경우', exact: true}).dispatchEvent('click');
     }
     await expect(page.getByTestId('blocked-result')).toBeVisible();
     await page.getByRole('button', {name: '직접 작성 방법 보기'}).dispatchEvent('click');

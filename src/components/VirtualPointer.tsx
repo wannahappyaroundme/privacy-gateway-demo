@@ -4,9 +4,10 @@ import type {VirtualPointerState} from '../demo/state';
 
 type VirtualPointerProps = {
   pointer: VirtualPointerState;
+  offsetY?: number;
 };
 
-export function VirtualPointer({pointer}: VirtualPointerProps) {
+export function VirtualPointer({pointer, offsetY = 0}: VirtualPointerProps) {
   if (!pointer.visible) return null;
 
   return (
@@ -17,7 +18,7 @@ export function VirtualPointer({pointer}: VirtualPointerProps) {
       data-testid="virtual-pointer"
       style={{
         left: pointer.x,
-        top: pointer.y,
+        top: pointer.y + offsetY,
         transform: pointer.pressed ? 'translate(-3px, -2px) scale(0.88)' : 'translate(-3px, -2px)',
       }}
     >

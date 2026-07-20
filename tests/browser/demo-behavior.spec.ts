@@ -291,3 +291,79 @@ test('places the recorded pointer hotspot inside the rendered summarize button',
   expect(bounds.pointer.y).toBeGreaterThanOrEqual(bounds.button.top);
   expect(bounds.pointer.y).toBeLessThanOrEqual(bounds.button.bottom);
 });
+
+test('places the normal public-flow pointer hotspot inside the summarize button', async ({page}) => {
+  await page.setViewportSize({width: 1_920, height: 1_080});
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.clock.install();
+  await page.goto('./');
+  await page.getByRole('button', {name: '시연 시작'}).click();
+  await page.clock.fastForward(3_000);
+  await expect(page.getByTestId('elapsed-time')).toHaveText('00:00 / 00:30');
+  await page.clock.fastForward((156 * 1_000) / 30);
+  await expect(page.getByTestId('demo-stage')).toHaveAttribute('data-frame', '156');
+
+  const bounds = await page.evaluate(() => {
+    const button = document.querySelector<HTMLElement>('.source-action')!.getBoundingClientRect();
+    const pointer = document.querySelector<HTMLElement>('[data-testid="virtual-pointer"]')!;
+    return {
+      button: {left: button.left, top: button.top, right: button.right, bottom: button.bottom},
+      pointer: {
+        x: Number.parseFloat(pointer.style.left),
+        y: Number.parseFloat(pointer.style.top),
+      },
+    };
+  });
+
+  expect(bounds.pointer.x).toBeGreaterThanOrEqual(bounds.button.left);
+  expect(bounds.pointer.x).toBeLessThanOrEqual(bounds.button.right);
+  expect(bounds.pointer.y).toBeGreaterThanOrEqual(bounds.button.top);
+  expect(bounds.pointer.y).toBeLessThanOrEqual(bounds.button.bottom);
+});
+
+test('uses exact scene boundaries for heading numbers and the current rail step', async ({page}) => {
+  await page.setViewportSize({width: 1_920, height: 1_080});
+  const bridge = await recordingBridge(page);
+  const boundaries = [
+    [89, '01', '개요'],
+    [90, '02', '기존 방식의 빈틈'],
+    [179, '02', '기존 방식의 빈틈'],
+    [180, '03', '정보 찾기'],
+    [299, '03', '정보 찾기'],
+    [300, '04', '유형별 보호'],
+    [419, '04', '유형별 보호'],
+    [420, '05', '승인 경로'],
+    [539, '05', '승인 경로'],
+    [540, '06', '전체 응답 검사'],
+    [689, '06', '전체 응답 검사'],
+    [690, '07', '확인된 결과'],
+    [809, '07', '확인된 결과'],
+    [810, '08', '혁신과 검증 예정'],
+  ] as const;
+
+  for (const [frame, number, label] of boundaries) {
+    await bridge.setFrame(frame);
+    await expect(page.locator('.scene-heading > span')).toHaveText(number);
+    await expect(page.locator('.step-rail button[aria-current="step"]')).toContainText(label);
+  }
+});
+
+test('shows only the current and adjacent steps on tablet without rail scrolling', async ({page}) => {
+  await page.setViewportSize({width: 768, height: 1_024});
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.goto('./');
+  await page.getByRole('button', {name: '시연 시작'}).click();
+  await page.getByRole('button', {name: '다음'}).click();
+  await page.getByRole('button', {name: '다음'}).click();
+  await page.getByRole('button', {name: '다음'}).click();
+  await page.getByRole('button', {name: '다음'}).click();
+
+  await expect(page.locator('.step-rail__item:visible')).toHaveCount(3);
+  await expect(page.locator('.step-rail__item.is-previous:visible')).toHaveCount(1);
+  await expect(page.locator('.step-rail__item.is-current:visible')).toHaveCount(1);
+  await expect(page.locator('.step-rail__item.is-next:visible')).toHaveCount(1);
+  const railOverflow = await page.locator('.step-rail').evaluate(
+    (rail) => rail.scrollWidth - rail.clientWidth,
+  );
+  expect(railOverflow).toBe(0);
+});

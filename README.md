@@ -5,7 +5,7 @@
 이 저장소는 제출 자료와 화면 녹화를 위한 공개 정적 시연입니다. 제품 성능이나 운영 보안 검증 결과를 뜻하지 않습니다. 화면의 수치와 결과는 흐름을 설명하기 위한 합성 예시입니다.
 
 - 공개 저장소: [github.com/wannahappyaroundme/privacy-gateway-demo](https://github.com/wannahappyaroundme/privacy-gateway-demo)
-- 시연 화면: [wannahappyaroundme.github.io/privacy-gateway-demo](https://wannahappyaroundme.github.io/privacy-gateway-demo/)
+- GitHub Pages를 배포한 경우 확인할 시연 주소: [wannahappyaroundme.github.io/privacy-gateway-demo](https://wannahappyaroundme.github.io/privacy-gateway-demo/)
 
 ## 바로 실행하기
 
@@ -17,7 +17,7 @@ npx playwright install chromium
 npm run dev
 ```
 
-브라우저에서 화면에 표시된 로컬 주소를 열고 `자동 시연 시작`을 누르면 고정된 타임라인에 따라 화면이 자동으로 진행됩니다. 일시정지, 다시 시작, 구간 이동을 지원합니다.
+브라우저에서 화면에 표시된 로컬 주소를 열고 `시연 시작`을 누르면 고정된 타임라인에 따라 화면이 자동으로 진행됩니다. 일시정지, 다시 시작, 구간 이동을 지원합니다.
 
 ## 녹화 준비
 
@@ -37,7 +37,7 @@ npm run verify
 
 검증 범위는 타입, 코드 규칙, 단위 테스트, 빌드, 브라우저 동작, 접근성, 기준 이미지, 녹화 흐름, 공개 파일 경계, 합성 데이터, 문구, 외부 요청 수단, 라이선스 고지입니다.
 
-2026년 7월 21일 공개 후보 기준으로 macOS에서 단위 테스트 1,116개, 브라우저·접근성 테스트 46개, 시각 테스트 9개가 통과했습니다. Linux 결과와 실제 Pages 주소는 아래 공개 배포 기록에서 별도로 확인합니다.
+2026년 7월 21일 공개 후보 기준의 검사 결과는 저장소의 Actions 기록에서 확인합니다. Pages를 배포한 경우 실제 화면은 위 시연 주소에서 확인할 수 있습니다.
 
 의존성 고지와 공개 후보 해시를 갱신할 때는 아래 순서로 실행합니다.
 

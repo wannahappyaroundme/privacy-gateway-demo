@@ -1,5 +1,5 @@
 import {COPY} from '../content/copy';
-import {MANUAL_STOPS} from '../demo/timeline';
+import {MANUAL_STOPS, sceneStepIndexAt} from '../demo/timeline';
 
 type StepRailProps = {
   frame: number;
@@ -7,16 +7,21 @@ type StepRailProps = {
 };
 
 export function StepRail({frame, onSelect}: StepRailProps) {
-  const activeIndex = MANUAL_STOPS.reduce(
-    (selected, stop, index) => (frame >= stop ? index : selected),
-    0,
-  );
+  const activeIndex = sceneStepIndexAt(frame);
 
   return (
     <nav className="step-rail" aria-label="시연 단계">
       <ol>
-        {COPY.steps.map((step, index) => (
-          <li key={step} className={index <= activeIndex ? 'step-rail__item is-reached' : 'step-rail__item'}>
+        {COPY.steps.map((step, index) => {
+          const relation = index === activeIndex
+            ? ' is-current is-adjacent'
+            : index === activeIndex - 1
+              ? ' is-previous is-adjacent'
+              : index === activeIndex + 1
+                ? ' is-next is-adjacent'
+                : '';
+          return (
+          <li key={step} className={`step-rail__item${index <= activeIndex ? ' is-reached' : ''}${relation}`}>
             <button
               type="button"
               onClick={() => onSelect(MANUAL_STOPS[index])}
@@ -26,7 +31,8 @@ export function StepRail({frame, onSelect}: StepRailProps) {
               <span>{step}</span>
             </button>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </nav>
   );
