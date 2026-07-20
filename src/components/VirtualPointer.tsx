@@ -13,6 +13,7 @@ export function VirtualPointer({pointer}: VirtualPointerProps) {
     <motion.div
       aria-hidden="true"
       className="virtual-pointer"
+      data-phase={pointer.phase}
       data-testid="virtual-pointer"
       style={{
         left: pointer.x,

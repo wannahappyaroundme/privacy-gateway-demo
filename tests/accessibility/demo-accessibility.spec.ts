@@ -288,6 +288,32 @@ test('keeps the 1280px completion validation copy horizontally readable', async 
   expect(metrics.valueHeights.every((height) => height <= 100)).toBe(true);
 });
 
+test('keeps every recorded stable frame inside the 1920x1080 stage', async ({page}) => {
+  const bridge = await recordingBridge(page);
+
+  for (const frame of [45, 150, 225, 360, 480, 610, 750, 855, 945, 975]) {
+    await bridge.setFrame(frame);
+    const overflow = await page.getByTestId('demo-stage').evaluate((stage) => ({
+      horizontal: stage.scrollWidth - stage.clientWidth,
+      vertical: stage.scrollHeight - stage.clientHeight,
+    }));
+    expect(overflow.horizontal, `frame ${frame}`).toBe(0);
+    expect(overflow.vertical, `frame ${frame}`).toBe(0);
+  }
+});
+
+test('keeps both mobile step controls at least 44px square', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('./');
+
+  for (const name of ['이전', '다음']) {
+    const bounds = await page.getByRole('button', {name}).boundingBox();
+    expect(bounds, name).not.toBeNull();
+    expect(bounds!.width, name).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height, name).toBeGreaterThanOrEqual(44);
+  }
+});
+
 for (const viewport of [
   {width: 1_920, height: 1_080},
   {width: 1_536, height: 900},

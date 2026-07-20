@@ -174,6 +174,11 @@ describe('pure 990-frame timeline', () => {
   });
 
   it('keeps the cursor hotspot inside the summarize target for every click frame', () => {
+    expect(stateAt(150, fixture).pointer).toMatchObject({
+      x: SUMMARIZE_BUTTON_BOUNDS.x + SUMMARIZE_BUTTON_BOUNDS.width / 2,
+      y: SUMMARIZE_BUTTON_BOUNDS.y + SUMMARIZE_BUTTON_BOUNDS.height / 2,
+    });
+
     for (let frame = 156; frame <= 165; frame += 1) {
       const {x, y} = stateAt(frame, fixture).pointer;
       expect(x).toBeGreaterThanOrEqual(SUMMARIZE_BUTTON_BOUNDS.x);
@@ -213,12 +218,15 @@ describe('pure 990-frame timeline', () => {
     expect(stateAt(690, fixture).result?.kind).toBe('verified');
   });
 
-  it('counts the validation plan once and holds its final planned values', () => {
-    expect(stateAt(809, fixture).validation).toEqual({progress: 0, people: 0, tasksPerPerson: 0});
-    expect(stateAt(810, fixture).validation.progress).toBe(0);
-    expect(stateAt(820, fixture).validation.people).toBeGreaterThan(0);
+  it('keeps the future validation sample fixed while only revealing its card', () => {
+    expect(stateAt(809, fixture).validation).toEqual({progress: 0, people: 5, tasksPerPerson: 10});
+    expect(stateAt(810, fixture).validation).toEqual({progress: 0, people: 5, tasksPerPerson: 10});
+    expect(stateAt(820, fixture).validation).toEqual({
+      progress: expect.any(Number),
+      people: 5,
+      tasksPerPerson: 10,
+    });
     expect(stateAt(834, fixture).validation).toEqual({progress: 1, people: 5, tasksPerPerson: 10});
-    expect(stateAt(835, fixture).validation).toEqual({progress: 1, people: 5, tasksPerPerson: 10});
     expect(stateAt(899, fixture).validation).toEqual({progress: 1, people: 5, tasksPerPerson: 10});
   });
 });

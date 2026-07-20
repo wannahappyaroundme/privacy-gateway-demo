@@ -135,15 +135,15 @@ function LiveRegion({view}: {view: DemoRuntimeView}) {
 function FinishView({timeline}: {timeline: TimelineState}) {
   return (
     <section className="finish-view">
-      <div className="roundtrip-flow" aria-label="왕복 전체 보호 흐름">
+      <ol className="roundtrip-flow" aria-label="왕복 전체 보호 흐름">
         {COPY.finalFlow.map((step, index) => (
-          <div key={step}>
+          <li key={step}>
             <span>{String(index + 1).padStart(2, '0')}</span>
             <strong>{step}</strong>
             {index < COPY.finalFlow.length - 1 && <b aria-hidden="true">→</b>}
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
       <div className="finish-grid">
         <EvidenceStatusTable />
         <ValidationPlan people={timeline.validation.people} tasksPerPerson={timeline.validation.tasksPerPerson} />

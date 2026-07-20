@@ -1,5 +1,7 @@
 import {expect, test, type Page} from '@playwright/test';
 
+import {SUMMARIZE_BUTTON_BOUNDS} from '../../src/demo/timeline';
+
 async function openRecordingFrame(page: Page, frame: number): Promise<void> {
   await page.setViewportSize({width: 1_920, height: 1_080});
   await page.goto('?record=1');
@@ -138,6 +140,7 @@ test('block actions navigate to reviewed frames and reveal fixed help', async ({
   await page.setViewportSize({width: 1_920, height: 1_080});
   const bridge = await recordingBridge(page);
   await bridge.setFrame(945);
+  await expect(page.getByText('이전 단계를 확인하거나 확인된 내용만 직접 작성해 이어갈 수 있어요.')).toBeVisible();
 
   await page.getByRole('button', {name: '직접 작성 방법 보기'}).click();
   await expect(page.getByTestId('demo-stage')).toHaveAttribute('data-frame', '975');
@@ -252,13 +255,39 @@ test('renders the approved validation copy from COPY.validation', async ({page})
   await expect(page.getByText('1인당 합성 과업 10건 이상')).toBeVisible();
 });
 
-test('renders calculated validation progress before the plan is complete', async ({page}) => {
+test('keeps the fixed future validation sample visible before its card reveal completes', async ({page}) => {
   await page.setViewportSize({width: 1_920, height: 1_080});
   const bridge = await recordingBridge(page);
   await bridge.setFrame(820);
 
-  await expect(page.getByText('현업 대표 2명')).toBeVisible();
-  await expect(page.getByText('1인당 합성 과업 4건')).toBeVisible();
-  await expect(page.getByText('현업 대표 5명')).toHaveCount(0);
-  await expect(page.getByText('1인당 합성 과업 10건 이상')).toHaveCount(0);
+  await expect(page.getByText('현업 대표 5명')).toBeVisible();
+  await expect(page.getByText('1인당 합성 과업 10건 이상')).toBeVisible();
+  await expect(page.locator('.validation-plan').getByText('미실시')).toBeVisible();
+});
+
+test('places the recorded pointer hotspot inside the rendered summarize button', async ({page}) => {
+  await openRecordingFrame(page, 156);
+
+  const bounds = await page.evaluate(() => {
+    const button = document.querySelector<HTMLElement>('.source-action')!.getBoundingClientRect();
+    const pointer = document.querySelector<HTMLElement>('[data-testid="virtual-pointer"]')!;
+    return {
+      button: {left: button.left, top: button.top, right: button.right, bottom: button.bottom},
+      pointer: {
+        x: Number.parseFloat(pointer.style.left),
+        y: Number.parseFloat(pointer.style.top),
+      },
+    };
+  });
+
+  expect(bounds.button).toEqual({
+    left: SUMMARIZE_BUTTON_BOUNDS.x,
+    top: SUMMARIZE_BUTTON_BOUNDS.y,
+    right: SUMMARIZE_BUTTON_BOUNDS.x + SUMMARIZE_BUTTON_BOUNDS.width,
+    bottom: SUMMARIZE_BUTTON_BOUNDS.y + SUMMARIZE_BUTTON_BOUNDS.height,
+  });
+  expect(bounds.pointer.x).toBeGreaterThanOrEqual(bounds.button.left);
+  expect(bounds.pointer.x).toBeLessThanOrEqual(bounds.button.right);
+  expect(bounds.pointer.y).toBeGreaterThanOrEqual(bounds.button.top);
+  expect(bounds.pointer.y).toBeLessThanOrEqual(bounds.button.bottom);
 });

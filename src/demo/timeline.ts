@@ -27,8 +27,8 @@ export const HOLD_RANGES = [
 ] as const;
 
 export const SUMMARIZE_BUTTON_BOUNDS = {
-  x: 320,
-  y: 700,
+  x: 321,
+  y: 733,
   width: 192,
   height: 56,
 } as const;
@@ -142,8 +142,8 @@ function validationAt(frame: number): ValidationPlanState {
   const validationProgress = progress(frame, 810, 834);
   return {
     progress: validationProgress,
-    people: Math.round(5 * validationProgress),
-    tasksPerPerson: Math.round(10 * validationProgress),
+    people: 5,
+    tasksPerPerson: 10,
   };
 }
 
