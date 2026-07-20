@@ -364,12 +364,23 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .playback-bar--manual { justify-content: flex-end; }
 
 .finish-view { display: grid; gap: 22px; }
-.roundtrip-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 24px; border: 1px solid var(--cobalt); border-radius: 18px; background: var(--cobalt-soft); }
-.roundtrip-flow div { position: relative; display: flex; align-items: center; gap: 12px; min-height: 70px; padding: 12px 18px; border-radius: 12px; background: #fff; }
+.roundtrip-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0; padding: 24px; border: 1px solid var(--cobalt); border-radius: 18px; background: var(--cobalt-soft); list-style: none; }
+.roundtrip-flow div, .roundtrip-flow li { position: relative; display: flex; align-items: center; gap: 12px; min-height: 70px; padding: 12px 18px; border-radius: 12px; background: #fff; }
 .roundtrip-flow span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #fff; background: var(--cobalt); font-size: 12px; font-weight: 700; }
 .roundtrip-flow strong { font-size: 17px; }
 .roundtrip-flow b { position: absolute; right: -19px; z-index: 1; color: var(--cobalt); font-size: 24px; }
 .finish-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 22px; }
+.overview-dashboard { display: grid; gap: 22px; }
+.overview-dashboard__grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 22px; }
+.overview-dashboard__grid > * { min-width: 0; }
+.gap-comparison { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 22px; min-height: 520px; }
+.gap-comparison > * { min-width: 0; }
+.gap-comparison__cards { display: grid; grid-template-rows: 1fr 1fr auto; gap: 16px; }
+.gap-card { display: flex; align-items: center; gap: 22px; padding: 28px; border: 1px solid var(--danger); border-radius: 18px; background: var(--danger-soft); }
+.gap-card > span { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 14px; color: #fff; background: var(--danger); font-size: 14px; font-weight: 700; }
+.gap-card h2 { margin: 5px 0 0; color: var(--navy); font-size: 25px; line-height: 1.35; }
+.gap-card .panel__eyebrow { color: var(--navy); }
+.gap-comparison__core { margin: 0; padding: 15px 18px; border-radius: 12px; color: var(--navy); background: var(--surface-muted); font-size: 15px; font-weight: 700; line-height: 1.5; }
 .evidence-table, .validation-plan { min-height: 292px; padding: 28px; }
 .evidence-table dl { display: grid; gap: 9px; margin: 18px 0 0; }
 .evidence-table dl > div { display: grid; grid-template-columns: 150px 1fr; align-items: center; padding: 13px 14px; border-radius: 10px; background: var(--surface-muted); }
@@ -428,7 +439,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   .demo-stage { overflow: visible; }
   .app-header { height: auto; min-height: 104px; gap: 14px; flex-wrap: wrap; padding-block: 12px; }
   .stage-content { padding-inline: 24px; }
-  .start-layout, .workbench-grid, .blocked-layout, .finish-grid { grid-template-columns: 1fr; }
+  .start-layout, .workbench-grid, .blocked-layout, .finish-grid, .overview-dashboard__grid, .gap-comparison { grid-template-columns: 1fr; }
   .start-layout { padding: 70px 0; }
   .start-card { max-width: 620px; width: 100%; justify-self: center; }
   .workbench-grid > :last-child { grid-column: auto; }
@@ -486,6 +497,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .demo-stage--recording .workbench-grid { grid-template-columns: 568px 514px 606px; }
 .demo-stage--recording .workbench-grid > :last-child { grid-column: auto; min-height: 520px; }
 .demo-stage--recording .finish-grid { grid-template-columns: 768px 938px; }
+.demo-stage--recording .overview-dashboard__grid { grid-template-columns: 768px 938px; }
+.demo-stage--recording .gap-comparison { grid-template-columns: 768px 938px; }
 .demo-stage--recording .blocked-layout { grid-template-columns: 682px 1024px; }
 .demo-stage--recording .source-action { position: absolute; left: 224px; top: 452px; width: 192px; margin: 0; }
 .demo-stage--recording .case-card__viewport { height: 330px; }

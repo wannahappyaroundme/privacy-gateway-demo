@@ -1,5 +1,16 @@
 import {expect, test, type Page} from '@playwright/test';
 
+async function openRecordingFrame(page: Page, frame: number): Promise<void> {
+  await page.setViewportSize({width: 1_920, height: 1_080});
+  await page.goto('?record=1');
+  await page.waitForFunction(() => '__FPG_RECORDING_V1__' in window);
+  await page.evaluate(() => window.__FPG_RECORDING_V1__!.ready);
+  await page.evaluate(
+    async (value) => window.__FPG_RECORDING_V1__!.setFrame(value),
+    frame,
+  );
+}
+
 type RecordingBridge = {
   ready: Promise<void>;
   setFrame(frame: number): Promise<{frame: number; ready: boolean}>;
@@ -27,6 +38,18 @@ test('renders the sample-led cobalt shell with one current step', async ({page})
   await expect(current).toHaveCount(1);
   expect(await current.evaluate((element) => getComputedStyle(element).borderColor))
     .toBe('rgb(39, 104, 232)');
+});
+
+test('shows the four-part roundtrip overview and the two existing-method gaps', async ({page}) => {
+  await openRecordingFrame(page, 45);
+  await expect(page.getByTestId('overview-dashboard')).toBeVisible();
+  await expect(page.getByTestId('overview-dashboard').getByRole('listitem')).toHaveCount(4);
+  await expect(page.getByTestId('overview-dashboard')).toContainText('검증 예정');
+  await expect(page.getByTestId('overview-dashboard')).toContainText('현업 대표 5명');
+  await expect(page.getByTestId('overview-dashboard')).toContainText('1인당 합성 과업 10건 이상');
+  await openRecordingFrame(page, 150);
+  await expect(page.getByTestId('gap-comparison')).toContainText('직접 삭제');
+  await expect(page.getByTestId('gap-comparison')).toContainText('요청 전체 차단');
 });
 
 test('starts motionless, then shows the user-triggered countdown', async ({page}) => {

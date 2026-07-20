@@ -9,7 +9,9 @@ import {BlockedResultPanel} from '../components/BlockedResultPanel';
 import {DemoShell} from '../components/DemoShell';
 import {EntityProtectionPanel} from '../components/EntityProtectionPanel';
 import {EvidenceStatusTable} from '../components/EvidenceStatusTable';
+import {GapComparison} from '../components/GapComparison';
 import {InspectionGate} from '../components/InspectionGate';
+import {OverviewDashboard} from '../components/OverviewDashboard';
 import {PlaybackControls} from '../components/PlaybackControls';
 import {PolicyBoundary} from '../components/PolicyBoundary';
 import {StepRail} from '../components/StepRail';
@@ -210,6 +212,15 @@ function Workbench({
             onSuccess={() => actions.goTo(750)}
           />
         </section>
+      ) : timeline.scene === 'overview' ? (
+        <OverviewDashboard />
+      ) : timeline.scene === 'gap' ? (
+        <GapComparison
+          caseId={bootstrap.fixture.case.caseId}
+          sourceText={bootstrap.fixture.case.sourceText}
+          summarySelected={timeline.summarySelected}
+          onSummarize={() => actions.goTo(225)}
+        />
       ) : (
         <section className="workbench-grid">
           <SyntheticCaseCard
