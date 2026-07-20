@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+config/credentials*
+coverage/
+test-results/
+playwright-report/
+.superpowers/
+.DS_Store
+artifacts/tmp/
+*.log

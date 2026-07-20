@@ -1,0 +1,11 @@
+# Release and security controls require explicit owner review.
+/.github/ @wannahappyaroundme
+/scripts/check-*.mjs @wannahappyaroundme
+/scripts/make-release-manifest.mjs @wannahappyaroundme
+/scripts/make-third-party-notices.mjs @wannahappyaroundme
+/scripts/release-policy.mjs @wannahappyaroundme
+/scripts/release-workspace.mjs @wannahappyaroundme
+/release-manifest.json @wannahappyaroundme
+/index.html @wannahappyaroundme
+/package.json @wannahappyaroundme
+/package-lock.json @wannahappyaroundme

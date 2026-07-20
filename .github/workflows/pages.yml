@@ -1,0 +1,97 @@
+name: Publish reviewed static demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_commit_sha:
+        description: Exact protected main commit approved for public release
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      CURRENT_REF: ${{ github.ref }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      CURRENT_COMMIT_SHA: ${{ github.sha }}
+      APPROVED_COMMIT_SHA: ${{ inputs.approved_commit_sha }}
+    steps:
+      - name: Require the approved protected main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$CURRENT_REF" != "refs/heads/main" ]]; then
+            echo "Release requires the main branch." >&2
+            exit 1
+          fi
+          if [[ "$REF_PROTECTED" != "true" ]]; then
+            echo "Release requires protected main." >&2
+            exit 1
+          fi
+          if [[ ! "$APPROVED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Release approval must be a lowercase full commit SHA." >&2
+            exit 1
+          fi
+          if [[ "$APPROVED_COMMIT_SHA" != "$CURRENT_COMMIT_SHA" ]]; then
+            echo "Approved and current commits do not match." >&2
+            exit 1
+          fi
+      - name: Check out the exact event commit
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify the checked-out commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APPROVED_COMMIT_SHA"
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '20.19.5'
+          package-manager-cache: false
+      - name: Install locked dependencies without package scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install the Chromium test runtime
+        run: npx playwright install --with-deps chromium
+      - name: Verify the exact release candidate
+        run: npm run verify
+      - name: Require separate public-release approval
+        run: node scripts/check-release.mjs --deployment
+      - name: Upload the verified static bundle
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ./dist
+          retention-days: 1
+          include-hidden-files: false
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure the existing Pages site
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: 'false'
+      - name: Deploy the verified artifact
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
