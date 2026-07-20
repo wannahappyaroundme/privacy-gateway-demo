@@ -31,8 +31,24 @@ export function DemoShell({frame, recordingMode, children}: DemoShellProps) {
           </div>
         </div>
         <div className="scope-badges" aria-label="시연 범위">
-          {COPY.scope.badges.map((badge) => (
-            <span key={badge}>{badge}</span>
+          {COPY.scope.badges.map((badge, index) => (
+            <span key={badge}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                {index === 0 ? (
+                  <>
+                    <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21" />
+                    <path d="m5.6 5.6 1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" />
+                    <circle cx="12" cy="12" r="4" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M12 3 5.5 5.8v5.4c0 4.2 2.6 7.8 6.5 9.3 3.9-1.5 6.5-5.1 6.5-9.3V5.8z" />
+                    <path d="M9 12h6M12 9v6" />
+                  </>
+                )}
+              </svg>
+              {badge}
+            </span>
           ))}
         </div>
       </header>

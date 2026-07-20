@@ -16,6 +16,19 @@ async function recordingBridge(page: Page): Promise<RecordingBridge> {
   };
 }
 
+test('renders the sample-led cobalt shell with one current step', async ({page}) => {
+  await page.clock.install();
+  await page.goto('./');
+  await expect(page.locator('.brand-name')).toHaveText('금융 AI 개인정보 보호 게이트웨이');
+  await expect(page.locator('.scope-badges span')).toHaveCount(2);
+  await page.getByRole('button', {name: '시연 시작'}).click();
+  await page.clock.fastForward(3_100);
+  const current = page.locator('.step-rail button[aria-current="step"]');
+  await expect(current).toHaveCount(1);
+  expect(await current.evaluate((element) => getComputedStyle(element).borderColor))
+    .toBe('rgb(39, 104, 232)');
+});
+
 test('starts motionless, then shows the user-triggered countdown', async ({page}) => {
   await page.goto('./');
 

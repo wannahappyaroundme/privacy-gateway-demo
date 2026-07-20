@@ -59,6 +59,14 @@ function criticalOrSerious(results: Awaited<ReturnType<AxeBuilder['analyze']>>) 
   return results.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''));
 }
 
+test('keeps the scope badge icons decorative', async ({page}) => {
+  await page.goto('./');
+  const icons = page.locator('.scope-badges span > svg');
+  await expect(icons).toHaveCount(2);
+  await expect(icons.first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(icons.last()).toHaveAttribute('aria-hidden', 'true');
+});
+
 test('has no critical or serious axe violations in the start and manual views', async ({page}) => {
   await page.goto('./');
   let results = await new AxeBuilder({page}).analyze();
@@ -84,6 +92,7 @@ test('keeps the start control first, exposes pause first during playback, and an
   await page.clock.install();
   await page.goto('./');
 
+  await focusPage(page);
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', {name: '시연 시작'})).toBeFocused();
 
@@ -127,8 +136,10 @@ test('keeps one current step and does not duplicate manual live announcements', 
   expect(liveText.filter(Boolean)).toEqual([]);
 
   await page.getByRole('button', {name: '다음'}).click();
-  await expect(page.locator('.step-rail button[aria-current="step"]')).toHaveCount(1);
-  await expect(page.locator('.step-rail button[aria-current="step"]')).toHaveText(/기존 방식의 빈틈/u);
+  const currentStep = page.locator('.step-rail button[aria-current="step"]');
+  await expect(currentStep).toHaveCount(1);
+  await expect(currentStep).toHaveText(/기존 방식의 빈틈/u);
+  expect(await currentStep.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('2px');
 
   const announcements = await page.locator('[aria-live="polite"]').allTextContents();
   expect(announcements.filter(Boolean)).toEqual([]);
