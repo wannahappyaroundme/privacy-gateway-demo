@@ -55,11 +55,17 @@ for (const frame of REVIEWED_FRAMES) {
       return;
     }
 
-    const surfaceSelector = frame === 855
-      ? '.finish-view'
-      : frame === 945
-        ? '.blocked-layout'
-        : '.workbench-grid';
+    const surfaceSelector = frame === 45
+      ? '.overview-dashboard'
+      : frame === 360
+        ? '.protection-matrix'
+        : frame === 610
+          ? '.inspection-dashboard'
+          : frame === 855
+            ? '.finish-view'
+            : frame === 945
+              ? '.blocked-layout'
+              : '.workbench-grid';
     const layout = await page.evaluate((selector) => {
       const stage = document.querySelector<HTMLElement>('[data-testid="demo-stage"]')!;
       const heading = document.querySelector<HTMLElement>('.scene-heading')!;
