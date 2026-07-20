@@ -33,14 +33,19 @@ export function SyntheticCaseCard({
   return (
     <article className="panel case-card">
       <div className="panel__heading">
-        <div>
-          <p className="panel__eyebrow">직원 업무</p>
-          <h2>{COPY.panels.case}</h2>
+        <div className="case-card__heading-copy">
+          <span className="case-card__icon" aria-hidden="true">01</span>
+          <div>
+            <p className="panel__eyebrow">직원 업무</p>
+            <h2>{COPY.panels.case}</h2>
+          </div>
         </div>
         <span className="case-id">{caseId}</span>
       </div>
       <p className="synthetic-label">
-        <span aria-hidden="true">◆</span> {COPY.case.classification}
+        <span className="synthetic-label__icon" aria-hidden="true">◆</span>
+        <span>합성 사례</span>
+        <strong>{COPY.case.classification}</strong>
       </p>
 
       <div className="case-card__viewport">
@@ -64,6 +69,9 @@ export function SyntheticCaseCard({
                   key={entity.type}
                   className={detectionProgress * 3 > index ? 'entity-chip is-found' : 'entity-chip'}
                 >
+                  <span className="entity-chip__status" aria-hidden="true">
+                    {detectionProgress * 3 > index ? '✓' : String(index + 1)}
+                  </span>
                   <b>{entity.type}</b>{entity.value}
                 </span>
               ))}

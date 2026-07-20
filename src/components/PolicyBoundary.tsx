@@ -17,6 +17,10 @@ export function PolicyBoundary({route}: PolicyBoundaryProps) {
           <h3>{COPY.panels.route}</h3>
         </div>
       </div>
+      <p className={route.internalState === 'approved' ? 'flow-status is-approved' : 'flow-status'}>
+        <span aria-hidden="true">{route.internalState === 'approved' ? '✓' : '·'}</span>
+        {route.internalState === 'approved' ? '승인 경로 확인' : '승인 경로 확인 중'}
+      </p>
       <div className="boundary-map">
         <div className={shown ? 'route-card route-card--closed' : 'route-card is-muted'}>
           <span className="route-card__icon" aria-hidden="true">×</span>

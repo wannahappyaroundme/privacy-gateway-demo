@@ -263,6 +263,12 @@ describe('rendered copy contract', () => {
     }
   });
 
+  it('keeps real-looking phone and account formats out of rendered copy', () => {
+    const rendered = JSON.stringify(COPY);
+    expect(rendered).not.toMatch(/01[016789]-?\d{3,4}-?\d{4}/u);
+    expect(rendered).not.toMatch(/\b\d{2,4}-\d{2,6}-\d{2,6}\b/u);
+  });
+
   it('keeps every rendered glyph in both licensed font subsets', () => {
     const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as unknown;
     const rendered = collectStrings(COPY).concat(collectStrings(fixture)).join('');

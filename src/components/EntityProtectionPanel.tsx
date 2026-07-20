@@ -10,6 +10,7 @@ type EntityProtectionPanelProps = {
 
 export function EntityProtectionPanel({progress, detectionProgress}: EntityProtectionPanelProps) {
   const values = [progress.name, progress.contact, progress.account];
+  const foundCount = Math.min(3, Math.ceil(detectionProgress * 3));
 
   return (
     <section className="flow-card protection-panel">
@@ -20,6 +21,10 @@ export function EntityProtectionPanel({progress, detectionProgress}: EntityProte
           <h3>{COPY.protection.protectByType}</h3>
         </div>
       </div>
+      <p className="flow-status" aria-live="polite">
+        <span aria-hidden="true">{foundCount === 3 ? '✓' : '·'}</span>
+        합성 정보 {foundCount}개 확인
+      </p>
       <div className="protection-list">
         {COPY.protection.entities.map((entity, index) => {
           const itemProgress = values[index];
@@ -30,6 +35,7 @@ export function EntityProtectionPanel({progress, detectionProgress}: EntityProte
               className={itemProgress > 0 ? 'protection-row is-protected' : 'protection-row'}
               style={{opacity: 1}}
             >
+              <span className="protection-row__icon" aria-hidden="true">{entity.type.slice(0, 1)}</span>
               <span className="protection-row__type">{entity.type}</span>
               <span className="protection-row__arrow" aria-hidden="true">→</span>
               <span className="protection-row__action">

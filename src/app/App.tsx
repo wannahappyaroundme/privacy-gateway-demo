@@ -14,6 +14,7 @@ import {InspectionGate} from '../components/InspectionGate';
 import {OverviewDashboard} from '../components/OverviewDashboard';
 import {PlaybackControls} from '../components/PlaybackControls';
 import {PolicyBoundary} from '../components/PolicyBoundary';
+import {ProtectionMatrix} from '../components/ProtectionMatrix';
 import {StepRail} from '../components/StepRail';
 import {SyntheticCaseCard} from '../components/SyntheticCaseCard';
 import {ValidationPlan} from '../components/ValidationPlan';
@@ -221,6 +222,8 @@ function Workbench({
           summarySelected={timeline.summarySelected}
           onSummarize={() => actions.goTo(225)}
         />
+      ) : timeline.scene === 'protect' ? (
+        <ProtectionMatrix progress={timeline.entityProtection} />
       ) : (
         <section className="workbench-grid">
           <SyntheticCaseCard

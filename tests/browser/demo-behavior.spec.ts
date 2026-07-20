@@ -52,6 +52,24 @@ test('shows the four-part roundtrip overview and the two existing-method gaps', 
   await expect(page.getByTestId('gap-comparison')).toContainText('요청 전체 차단');
 });
 
+test('renders the protection matrix with synthetic examples only', async ({page}) => {
+  await openRecordingFrame(page, 360);
+  const matrix = page.getByTestId('protection-matrix');
+  await expect(matrix).toContainText('직접 식별자');
+  await expect(matrix).toContainText('준식별자');
+  await expect(matrix).toContainText('민감 정보');
+  await expect(matrix).toContainText('비개인정보');
+  await expect(matrix).toContainText('마스킹');
+  await expect(matrix).toContainText('가명처리');
+  await expect(matrix).toContainText('비식별화');
+  await expect(matrix).toContainText('토큰화');
+  await expect(matrix).toContainText('원문 제공');
+  await expect(matrix).toContainText('합성연락처-001');
+  await expect(matrix).toContainText('정책 시뮬레이션이며 실제 처리 성능을 뜻하지 않습니다');
+  await expect(matrix.getByRole('row')).toHaveCount(5);
+  await expect(matrix).not.toContainText(/010-\d{3,4}-\d{4}/u);
+});
+
 test('starts motionless, then shows the user-triggered countdown', async ({page}) => {
   await page.goto('./');
 
