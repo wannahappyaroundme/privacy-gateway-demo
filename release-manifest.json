@@ -3,7 +3,7 @@
   "status": "local-preflight-only",
   "fixtureSha256": "eb06cc37bdca9203ac726c5e9751dfc2ab4a41424a4f7321c5b3833250b33b2c",
   "copySha256": "032b1db5d344fea7aa3126eac2a191cd9e3596fc3926b23225e167dd1c89e39d",
-  "approvedSourceSha256": "59026b68b7b1ce41acaef2966a286aa9c48ed436156b12f8212e47e3c2e59bf5",
+  "approvedSourceSha256": "0fa154c8e55213ce75c76a11c8deb76a2d13a0252aa0668ba5335510bfb28c6e",
   "reviewer": null,
   "approvedAt": null
 }
