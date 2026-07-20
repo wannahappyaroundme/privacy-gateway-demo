@@ -150,7 +150,25 @@ async function main() {
   const expected = await expectedNoticeDocument();
   if (process.argv.includes('--check')) {
     const current = await readFile(NOTICE_PATH, 'utf8');
-    if (current !== expected) throw new Error('THIRD_PARTY_NOTICES.md is out of date');
+    if (current !== expected) {
+      const currentLines = current.split('\n');
+      const expectedLines = expected.split('\n');
+      const limit = Math.max(currentLines.length, expectedLines.length);
+      let firstDifference = 0;
+      while (
+        firstDifference < limit &&
+        currentLines[firstDifference] === expectedLines[firstDifference]
+      ) {
+        firstDifference += 1;
+      }
+      const lineNumber = firstDifference + 1;
+      process.stderr.write(
+        `THIRD_PARTY_NOTICES.md first differs at line ${lineNumber}.\n` +
+          `Current: ${currentLines[firstDifference] ?? '<missing>'}\n` +
+          `Expected: ${expectedLines[firstDifference] ?? '<missing>'}\n`,
+      );
+      throw new Error('THIRD_PARTY_NOTICES.md is out of date');
+    }
     process.stdout.write('Dependency notices match the lockfile and installed license files.\n');
     return;
   }
