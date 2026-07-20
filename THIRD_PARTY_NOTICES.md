@@ -54,8 +54,8 @@ Exact Bold preparation and subset commands:
 
 Output SHA-256:
 
-- `PrivacyDemoSans-Regular.woff2`: `51b2c04f4dedf8dc8a74b014eef4302514d45286caa2c93be571f4d5ace64be9`
-- `PrivacyDemoSans-Bold.woff2`: `50798777d301140ffd88bbe393c3d7896a8715d1dba3d53ac13030058431619b`
+- `PrivacyDemoSans-Regular.woff2`: `afdbb521c41d1dcdb8235a624de8cda94c023c0582292f0de998f90cf1f463d3`
+- `PrivacyDemoSans-Bold.woff2`: `7c6ca3e9eda6feefba77d885f086c3109acc03facec254d94bb0226adaf7845e`
 
 The source zip, source OTF files, temporary renamed OTF files, and temporary glyph list are not committed.
 

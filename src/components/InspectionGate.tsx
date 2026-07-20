@@ -18,7 +18,14 @@ export function InspectionGate({inspection}: InspectionGateProps) {
       <p className="inspection-gate__message">
         {inspection.complete ? COPY.inspection.complete : COPY.inspection.waiting}
       </p>
-      <div className="inspection-gate__progress">
+      <div
+        className="inspection-gate__progress"
+        role="progressbar"
+        aria-label="결과 공개 전 검사 진행률"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
         <span style={{width: `${percent}%`}} />
       </div>
       <p className="inspection-gate__percent">전체 응답 확인 {percent}%</p>

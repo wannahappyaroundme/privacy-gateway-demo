@@ -10,6 +10,7 @@ import {DemoShell} from '../components/DemoShell';
 import {EntityProtectionPanel} from '../components/EntityProtectionPanel';
 import {EvidenceStatusTable} from '../components/EvidenceStatusTable';
 import {GapComparison} from '../components/GapComparison';
+import {InspectionDashboard} from '../components/InspectionDashboard';
 import {InspectionGate} from '../components/InspectionGate';
 import {OverviewDashboard} from '../components/OverviewDashboard';
 import {PlaybackControls} from '../components/PlaybackControls';
@@ -224,6 +225,8 @@ function Workbench({
         />
       ) : timeline.scene === 'protect' ? (
         <ProtectionMatrix progress={timeline.entityProtection} />
+      ) : timeline.scene === 'inspect' ? (
+        <InspectionDashboard inspection={timeline.inspection} />
       ) : (
         <section className="workbench-grid">
           <SyntheticCaseCard

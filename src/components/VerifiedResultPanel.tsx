@@ -20,7 +20,7 @@ export function VerifiedResultPanel({fields, revealProgress}: VerifiedResultPane
         </div>
         <span className="verified-result__status"><span aria-hidden="true">✓</span> 결과 공개</span>
       </div>
-      <dl className="result-fields">
+      <dl className="result-fields" aria-label="확인된 상담요약 5개 항목">
         {fields.map((field) => (
           <div key={field.label} className={field.label === '직원이 확인할 항목' ? 'result-field result-field--review' : 'result-field'}>
             <dt>{field.label}</dt>

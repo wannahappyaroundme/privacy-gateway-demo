@@ -68,6 +68,7 @@ test('renders the protection matrix with synthetic examples only', async ({page}
   await expect(matrix).toContainText('정책 시뮬레이션이며 실제 처리 성능을 뜻하지 않습니다');
   await expect(matrix.getByRole('row')).toHaveCount(5);
   await expect(matrix).not.toContainText(/010-\d{3,4}-\d{4}/u);
+  await expect(matrix).not.toContainText(/\b\d{2,6}(?:-\d{2,6}){2,3}\b/u);
 });
 
 test('starts motionless, then shows the user-triggered countdown', async ({page}) => {
@@ -101,14 +102,23 @@ test('keeps verified result absent until inspection and withholds the block bran
   const bridge = await recordingBridge(page);
 
   await bridge.setFrame(610);
+  await expect(page.getByTestId('inspection-dashboard')).toBeVisible();
+  await expect(page.locator('[data-testid="inspection-check"]')).toHaveCount(6);
   await expect(page.getByTestId('inspection-gate')).toBeVisible();
   await expect(page.getByText('정확히 연결됨 → 결과 공개')).toBeVisible();
   await expect(page.getByText('형태가 달라짐 → 결과 미공개')).toBeVisible();
   await expect(page.getByTestId('verified-result')).toHaveCount(0);
   await expect(page.getByText('자동이체 오류 상담')).toHaveCount(0);
 
+  await bridge.setFrame(689);
+  await expect(page.locator('.inspection-detail-card__heading')).toContainText('5/6 통과');
+  await expect(page.locator('.inspection-summary')).toContainText('1 검사 중');
+  await expect(page.getByTestId('verified-result')).toHaveCount(0);
+
   await bridge.setFrame(750);
   await expect(page.getByTestId('verified-result')).toBeVisible();
+  await expect(page.locator('.result-field')).toHaveCount(5);
+  await expect(page.getByText('사람이 확인할 항목')).toBeVisible();
   await expect(page.getByText('자동이체 오류 상담')).toBeVisible();
 
   await bridge.setFrame(945);

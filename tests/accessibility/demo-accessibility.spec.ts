@@ -88,6 +88,19 @@ test('has no critical or serious axe violations in every major rendered state', 
   }
 });
 
+test('exposes both inspection progress indicators without relying on color', async ({page}) => {
+  const bridge = await recordingBridge(page);
+  await bridge.setFrame(610);
+
+  await expect(page.getByRole('progressbar')).toHaveCount(2);
+  await expect(page.getByRole('progressbar', {name: '전체 응답 검사 진행률'}))
+    .toHaveAttribute('aria-valuenow', '55');
+  await expect(page.getByRole('progressbar', {name: '결과 공개 전 검사 진행률'}))
+    .toHaveAttribute('aria-valuenow', '55');
+  await expect(page.locator('.inspection-progress-list .is-active')).toContainText('검사 중');
+  await expect(page.locator('.inspection-check-table .is-active')).toContainText('검사 중');
+});
+
 test('keeps the start control first, exposes pause first during playback, and announces countdown once', async ({page}) => {
   await page.clock.install();
   await page.goto('./');
