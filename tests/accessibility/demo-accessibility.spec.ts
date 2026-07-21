@@ -59,6 +59,14 @@ function criticalOrSerious(results: Awaited<ReturnType<AxeBuilder['analyze']>>) 
   return results.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''));
 }
 
+test('keeps the scope badge icons decorative', async ({page}) => {
+  await page.goto('./');
+  const icons = page.locator('.scope-badges span > svg');
+  await expect(icons).toHaveCount(2);
+  await expect(icons.first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(icons.last()).toHaveAttribute('aria-hidden', 'true');
+});
+
 test('has no critical or serious axe violations in the start and manual views', async ({page}) => {
   await page.goto('./');
   let results = await new AxeBuilder({page}).analyze();
@@ -80,10 +88,24 @@ test('has no critical or serious axe violations in every major rendered state', 
   }
 });
 
+test('exposes both inspection progress indicators without relying on color', async ({page}) => {
+  const bridge = await recordingBridge(page);
+  await bridge.setFrame(610);
+
+  await expect(page.getByRole('progressbar')).toHaveCount(2);
+  await expect(page.getByRole('progressbar', {name: '전체 응답 검사 진행률'}))
+    .toHaveAttribute('aria-valuenow', '55');
+  await expect(page.getByRole('progressbar', {name: '결과 공개 전 검사 진행률'}))
+    .toHaveAttribute('aria-valuenow', '55');
+  await expect(page.locator('.inspection-progress-list .is-active')).toContainText('검사 중');
+  await expect(page.locator('.inspection-check-table .is-active')).toContainText('검사 중');
+});
+
 test('keeps the start control first, exposes pause first during playback, and announces countdown once', async ({page}) => {
   await page.clock.install();
   await page.goto('./');
 
+  await focusPage(page);
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', {name: '시연 시작'})).toBeFocused();
 
@@ -127,8 +149,10 @@ test('keeps one current step and does not duplicate manual live announcements', 
   expect(liveText.filter(Boolean)).toEqual([]);
 
   await page.getByRole('button', {name: '다음'}).click();
-  await expect(page.locator('.step-rail button[aria-current="step"]')).toHaveCount(1);
-  await expect(page.locator('.step-rail button[aria-current="step"]')).toHaveText(/기존 방식의 빈틈/u);
+  const currentStep = page.locator('.step-rail button[aria-current="step"]');
+  await expect(currentStep).toHaveCount(1);
+  await expect(currentStep).toHaveText(/기존 방식의 빈틈/u);
+  expect(await currentStep.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('2px');
 
   const announcements = await page.locator('[aria-live="polite"]').allTextContents();
   expect(announcements.filter(Boolean)).toEqual([]);
@@ -264,6 +288,32 @@ test('keeps the 1280px completion validation copy horizontally readable', async 
   expect(metrics.valueHeights.every((height) => height <= 100)).toBe(true);
 });
 
+test('keeps every recorded stable frame inside the 1920x1080 stage', async ({page}) => {
+  const bridge = await recordingBridge(page);
+
+  for (const frame of [45, 150, 225, 360, 480, 610, 750, 855, 945, 975]) {
+    await bridge.setFrame(frame);
+    const overflow = await page.getByTestId('demo-stage').evaluate((stage) => ({
+      horizontal: stage.scrollWidth - stage.clientWidth,
+      vertical: stage.scrollHeight - stage.clientHeight,
+    }));
+    expect(overflow.horizontal, `frame ${frame}`).toBe(0);
+    expect(overflow.vertical, `frame ${frame}`).toBe(0);
+  }
+});
+
+test('keeps both mobile step controls at least 44px square', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('./');
+
+  for (const name of ['이전', '다음']) {
+    const bounds = await page.getByRole('button', {name}).boundingBox();
+    expect(bounds, name).not.toBeNull();
+    expect(bounds!.width, name).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height, name).toBeGreaterThanOrEqual(44);
+  }
+});
+
 for (const viewport of [
   {width: 1_920, height: 1_080},
   {width: 1_536, height: 900},
@@ -374,7 +424,7 @@ for (const viewport of [
     if (viewport.width < 768) {
       await page.getByRole('button', {name: '다음'}).dispatchEvent('click');
     } else {
-      await page.getByRole('button', {name: '확인이 필요한 경우'}).dispatchEvent('click');
+      await page.getByRole('button', {name: '확인이 필요한 경우', exact: true}).dispatchEvent('click');
     }
     await expect(page.getByTestId('blocked-result')).toBeVisible();
     await page.getByRole('button', {name: '직접 작성 방법 보기'}).dispatchEvent('click');

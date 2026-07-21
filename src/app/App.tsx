@@ -4,14 +4,19 @@ import rawFixture from '../demo/fixtures/synthetic-consultation-v1.json?raw';
 import {nearestStopAtOrBefore} from '../demo/playback';
 import {validateFixture} from '../demo/schema';
 import type {TimelineState} from '../demo/state';
+import {PUBLIC_PLAYBACK_POINTER_OFFSET_Y, sceneStepIndexFor} from '../demo/timeline';
 import {COPY} from '../content/copy';
 import {BlockedResultPanel} from '../components/BlockedResultPanel';
 import {DemoShell} from '../components/DemoShell';
 import {EntityProtectionPanel} from '../components/EntityProtectionPanel';
 import {EvidenceStatusTable} from '../components/EvidenceStatusTable';
+import {GapComparison} from '../components/GapComparison';
+import {InspectionDashboard} from '../components/InspectionDashboard';
 import {InspectionGate} from '../components/InspectionGate';
+import {OverviewDashboard} from '../components/OverviewDashboard';
 import {PlaybackControls} from '../components/PlaybackControls';
 import {PolicyBoundary} from '../components/PolicyBoundary';
+import {ProtectionMatrix} from '../components/ProtectionMatrix';
 import {StepRail} from '../components/StepRail';
 import {SyntheticCaseCard} from '../components/SyntheticCaseCard';
 import {ValidationPlan} from '../components/ValidationPlan';
@@ -83,7 +88,7 @@ function Countdown({label}: {label: '3' | '2' | '1'}) {
 }
 
 function SceneHeading({timeline}: {timeline: TimelineState}) {
-  const sceneNumber = timeline.frame < 900 ? Math.min(8, Math.floor(timeline.frame / 110) + 1) : 9;
+  const sceneNumber = sceneStepIndexFor(timeline.scene) + 1;
   return (
     <div className="scene-heading">
       <span>{String(sceneNumber).padStart(2, '0')}</span>
@@ -131,15 +136,15 @@ function LiveRegion({view}: {view: DemoRuntimeView}) {
 function FinishView({timeline}: {timeline: TimelineState}) {
   return (
     <section className="finish-view">
-      <div className="roundtrip-flow" aria-label="왕복 전체 보호 흐름">
+      <ol className="roundtrip-flow" aria-label="왕복 전체 보호 흐름">
         {COPY.finalFlow.map((step, index) => (
-          <div key={step}>
+          <li key={step}>
             <span>{String(index + 1).padStart(2, '0')}</span>
             <strong>{step}</strong>
             {index < COPY.finalFlow.length - 1 && <b aria-hidden="true">→</b>}
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
       <div className="finish-grid">
         <EvidenceStatusTable />
         <ValidationPlan people={timeline.validation.people} tasksPerPerson={timeline.validation.tasksPerPerson} />
@@ -181,7 +186,7 @@ function Workbench({
         />
       )}
 
-      {!finish && <StepRail frame={timeline.frame} onSelect={actions.goTo} />}
+      <StepRail frame={timeline.frame} onSelect={actions.goTo} />
 
       {runtime.phase === 'complete' && (
         <section className="end-banner">
@@ -210,6 +215,19 @@ function Workbench({
             onSuccess={() => actions.goTo(750)}
           />
         </section>
+      ) : timeline.scene === 'overview' ? (
+        <OverviewDashboard />
+      ) : timeline.scene === 'gap' ? (
+        <GapComparison
+          caseId={bootstrap.fixture.case.caseId}
+          sourceText={bootstrap.fixture.case.sourceText}
+          summarySelected={timeline.summarySelected}
+          onSummarize={() => actions.goTo(225)}
+        />
+      ) : timeline.scene === 'protect' ? (
+        <ProtectionMatrix progress={timeline.entityProtection} />
+      ) : timeline.scene === 'inspect' ? (
+        <InspectionDashboard inspection={timeline.inspection} />
       ) : (
         <section className="workbench-grid">
           <SyntheticCaseCard
@@ -235,7 +253,7 @@ function Workbench({
       )}
 
       {!recordingMode && !manualOnly && runtime.phase !== 'idle' && runtime.phase !== 'countdown' && timeline.pointer.visible && (
-        <VirtualPointer pointer={timeline.pointer} />
+        <VirtualPointer pointer={timeline.pointer} offsetY={PUBLIC_PLAYBACK_POINTER_OFFSET_Y} />
       )}
       {recordingMode && <VirtualPointer pointer={timeline.pointer} />}
     </>

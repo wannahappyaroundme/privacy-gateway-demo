@@ -15,6 +15,24 @@ export type {TimelineResult, TimelineState} from './state';
 
 export const MANUAL_STOPS = [45, 150, 225, 360, 480, 610, 750, 855, 945] as const;
 
+export const SCENE_STEPS = [
+  {scene: 'overview', startFrame: 0, manualStop: 45},
+  {scene: 'gap', startFrame: 90, manualStop: 150},
+  {scene: 'detect', startFrame: 180, manualStop: 225},
+  {scene: 'protect', startFrame: 300, manualStop: 360},
+  {scene: 'route', startFrame: 420, manualStop: 480},
+  {scene: 'inspect', startFrame: 540, manualStop: 610},
+  {scene: 'result', startFrame: 690, manualStop: 750},
+  {scene: 'finish', startFrame: 810, manualStop: 855},
+  {scene: 'withheld', startFrame: 900, manualStop: 945},
+] as const satisfies readonly {
+  scene: SceneId;
+  startFrame: number;
+  manualStop: (typeof MANUAL_STOPS)[number];
+}[];
+
+export const PUBLIC_PLAYBACK_POINTER_OFFSET_Y = 88;
+
 export const HOLD_RANGES = [
   [30, 60],
   [210, 240],
@@ -27,8 +45,8 @@ export const HOLD_RANGES = [
 ] as const;
 
 export const SUMMARIZE_BUTTON_BOUNDS = {
-  x: 320,
-  y: 700,
+  x: 321,
+  y: 733,
   width: 192,
   height: 56,
 } as const;
@@ -59,16 +77,20 @@ function lerp(from: number, to: number, amount: number): number {
   return from + (to - from) * amount;
 }
 
+export function sceneStepIndexAt(frame: number): number {
+  assertFrame(frame);
+  return SCENE_STEPS.reduce(
+    (selected, step, index) => (frame >= step.startFrame ? index : selected),
+    0,
+  );
+}
+
+export function sceneStepIndexFor(scene: SceneId): number {
+  return SCENE_STEPS.findIndex((step) => step.scene === scene);
+}
+
 function sceneAt(frame: number): SceneId {
-  if (frame < 90) return 'overview';
-  if (frame < 180) return 'gap';
-  if (frame < 300) return 'detect';
-  if (frame < 420) return 'protect';
-  if (frame < 540) return 'route';
-  if (frame < 690) return 'inspect';
-  if (frame < 810) return 'result';
-  if (frame < 900) return 'finish';
-  return 'withheld';
+  return SCENE_STEPS[sceneStepIndexAt(frame)].scene;
 }
 
 function pointerAt(frame: number): VirtualPointerState {
@@ -142,8 +164,8 @@ function validationAt(frame: number): ValidationPlanState {
   const validationProgress = progress(frame, 810, 834);
   return {
     progress: validationProgress,
-    people: Math.round(5 * validationProgress),
-    tasksPerPerson: Math.round(10 * validationProgress),
+    people: 5,
+    tasksPerPerson: 10,
   };
 }
 

@@ -1,9 +1,12 @@
 import {createHash} from 'node:crypto';
-import {readFile, writeFile} from 'node:fs/promises';
+import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 import {ALLOWED_LICENSES} from './release-policy.mjs';
+import {noticeDifferencePreview, selectLicenseFile} from './dependency-notice-utils.mjs';
+
+export {noticeDifferencePreview, selectLicenseFile} from './dependency-notice-utils.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const NOTICE_PATH = path.join(ROOT, 'THIRD_PARTY_NOTICES.md');
@@ -44,19 +47,12 @@ async function packageNotice(lockPath, metadata) {
       }
     }
   }
-  const candidates = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'NOTICE'];
   let licenseBytes;
   let licenseFile;
   if (!metadata.optional && packageJson) {
-    for (const candidate of candidates) {
-      try {
-        licenseBytes = await readFile(path.join(packageDirectory, candidate));
-        licenseFile = candidate;
-        break;
-      } catch (error) {
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') continue;
-        throw error;
-      }
+    licenseFile = selectLicenseFile(await readdir(packageDirectory));
+    if (licenseFile) {
+      licenseBytes = await readFile(path.join(packageDirectory, licenseFile));
     }
   }
   const declarationOnly = !licenseBytes || !licenseFile;
@@ -150,7 +146,10 @@ async function main() {
   const expected = await expectedNoticeDocument();
   if (process.argv.includes('--check')) {
     const current = await readFile(NOTICE_PATH, 'utf8');
-    if (current !== expected) throw new Error('THIRD_PARTY_NOTICES.md is out of date');
+    if (current !== expected) {
+      process.stderr.write(noticeDifferencePreview(current, expected));
+      throw new Error('THIRD_PARTY_NOTICES.md is out of date');
+    }
     process.stdout.write('Dependency notices match the lockfile and installed license files.\n');
     return;
   }

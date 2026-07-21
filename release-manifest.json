@@ -2,8 +2,8 @@
   "schemaVersion": "1.0",
   "status": "public-release-approved",
   "fixtureSha256": "eb06cc37bdca9203ac726c5e9751dfc2ab4a41424a4f7321c5b3833250b33b2c",
-  "copySha256": "f8e74c8e0aba6cae75d758b36db98e11e984f4e50f028110e4a8989cd4936288",
-  "approvedSourceSha256": "1f92391186ca23e3cc0fb039e37b847dc4c89f90c3aeb9a8217ece1d9ec9a4d7",
-  "reviewer": "Owner approval with independent Task 9 audit",
-  "approvedAt": "2026-07-20T11:31:03.000Z"
+  "copySha256": "032b1db5d344fea7aa3126eac2a191cd9e3596fc3926b23225e167dd1c89e39d",
+  "approvedSourceSha256": "fba2dc01ef2a32cf51a5cba29244fdc6b20f284701ea653697ea81c4e7cc7dd8",
+  "reviewer": "Owner explicit public deployment approval",
+  "approvedAt": "2026-07-21T07:29:28.000Z"
 }

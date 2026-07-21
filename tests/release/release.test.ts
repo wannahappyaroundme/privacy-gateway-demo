@@ -35,9 +35,19 @@ type ReleasePolicy = {
   }>;
 };
 
+type NoticeModule = {
+  selectLicenseFile(entries: readonly string[]): string | null;
+  noticeDifferencePreview(current: string, expected: string): string;
+};
+
 async function loadReleasePolicy(): Promise<ReleasePolicy> {
   const url = pathToFileURL(resolve('scripts/release-policy.mjs')).href;
   return (await import(url)) as ReleasePolicy;
+}
+
+async function loadNoticeModule(): Promise<NoticeModule> {
+  const url = pathToFileURL(resolve('scripts/dependency-notice-utils.mjs')).href;
+  return (await import(url)) as NoticeModule;
 }
 
 function readOrEmpty(path: string): string {
@@ -45,6 +55,21 @@ function readOrEmpty(path: string): string {
 }
 
 describe('public release policy', () => {
+  it('selects the actual license filename independently of filesystem case rules', async () => {
+    const notices = await loadNoticeModule();
+    expect(notices.selectLicenseFile(['package.json', 'license', 'readme.md'])).toBe('license');
+    expect(notices.selectLicenseFile(['LICENSE.md', 'license'])).toBe('license');
+    expect(notices.selectLicenseFile(['NOTICE', 'LICENSE.txt'])).toBe('LICENSE.txt');
+    expect(notices.selectLicenseFile(['package.json'])).toBeNull();
+  });
+
+  it('reports the first notice difference without printing package contents broadly', async () => {
+    const notices = await loadNoticeModule();
+    expect(notices.noticeDifferencePreview('one\ntwo\n', 'one\nthree\n')).toBe(
+      'THIRD_PARTY_NOTICES.md first differs at line 2.\nCurrent: two\nExpected: three\n',
+    );
+  });
+
   it('keeps the exact reviewed CSP before every resource declaration', () => {
     const html = readFileSync('index.html', 'utf8');
     const match = html.match(

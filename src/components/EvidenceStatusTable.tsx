@@ -2,9 +2,9 @@ import {COPY} from '../content/copy';
 
 export function EvidenceStatusTable() {
   const rows = [
-    [COPY.evidence.externalLabel, COPY.evidence.externalValue],
-    [COPY.evidence.beforeInspectionLabel, COPY.evidence.beforeInspectionValue],
-    [COPY.evidence.operationalLabel, COPY.evidence.operationalValue],
+    [COPY.evidence.externalLabel, COPY.evidence.externalValue, 'link'],
+    [COPY.evidence.beforeInspectionLabel, COPY.evidence.beforeInspectionValue, 'hidden'],
+    [COPY.evidence.operationalLabel, COPY.evidence.operationalValue, 'planned'],
   ] as const;
 
   return (
@@ -12,10 +12,15 @@ export function EvidenceStatusTable() {
       <p className="panel__eyebrow">원문 없는 상태표</p>
       <h2>{COPY.panels.evidence}</h2>
       <dl>
-        {rows.map(([label, value], index) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd><span aria-hidden="true">{index === 0 ? '○' : index === 1 ? '✓' : '◇'}</span>{value}</dd>
+        {rows.map(([label, value, state]) => (
+          <div key={label} className={`evidence-row evidence-row--${state}`}>
+            <dt>
+              <span className="evidence-row__icon" aria-hidden="true">
+                {state === 'link' ? '×' : state === 'hidden' ? '✓' : 'i'}
+              </span>
+              {label}
+            </dt>
+            <dd>{value}</dd>
           </div>
         ))}
       </dl>
