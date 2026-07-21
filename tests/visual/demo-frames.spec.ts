@@ -58,7 +58,8 @@ for (const frame of REVIEWED_FRAMES) {
     const layout = await page.evaluate(() => {
       const stage = document.querySelector<HTMLElement>('[data-testid="demo-stage"]')!;
       const heading = document.querySelector<HTMLElement>('.workspace-heading')!;
-      const surface = document.querySelector<HTMLElement>('.product-workspace')!;
+      const workspace = document.querySelector<HTMLElement>('.product-workspace')!;
+      const surface = document.querySelector<HTMLElement>('.product-workspace__grid')!;
       const footer = document.querySelector<HTMLElement>('.app-footer')!;
       const stageRect = stage.getBoundingClientRect();
       const headingRect = heading.getBoundingClientRect();
@@ -66,7 +67,7 @@ for (const frame of REVIEWED_FRAMES) {
       const footerRect = footer.getBoundingClientRect();
       return {
         headingText: heading.querySelector('h1')?.textContent?.trim() ?? '',
-        productState: surface.dataset.productState,
+        productState: workspace.dataset.productState,
         stage: {width: stageRect.width, height: stageRect.height},
         heading: {left: headingRect.left, right: headingRect.right, top: headingRect.top},
         surface: {
