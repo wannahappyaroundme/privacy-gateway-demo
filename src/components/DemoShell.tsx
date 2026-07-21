@@ -27,30 +27,15 @@ export function DemoShell({frame, recordingMode, children}: DemoShellProps) {
           </span>
           <div>
             <p className="brand-name">{COPY.product.name}</p>
-            <p className="brand-promise">{COPY.product.memoryLine}</p>
+            <p className="brand-promise">{COPY.product.category}</p>
           </div>
         </div>
-        <div className="scope-badges" aria-label="시연 범위">
-          {COPY.scope.badges.map((badge, index) => (
-            <span key={badge}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                {index === 0 ? (
-                  <>
-                    <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21" />
-                    <path d="m5.6 5.6 1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" />
-                    <circle cx="12" cy="12" r="4" />
-                  </>
-                ) : (
-                  <>
-                    <path d="M12 3 5.5 5.8v5.4c0 4.2 2.6 7.8 6.5 9.3 3.9-1.5 6.5-5.1 6.5-9.3V5.8z" />
-                    <path d="M9 12h6M12 9v6" />
-                  </>
-                )}
-              </svg>
-              {badge}
-            </span>
-          ))}
-        </div>
+        <nav className="product-nav" aria-label="단디 업무 메뉴">
+          <a href="#consultation-title" aria-current="page">상담 요약</a>
+          <span>보호 정책</span>
+          <span>처리 이력</span>
+        </nav>
+        <div className="header-context"><span aria-hidden="true">은</span><strong>은행 상담 업무</strong></div>
       </header>
 
       <div className="stage-content">{children}</div>

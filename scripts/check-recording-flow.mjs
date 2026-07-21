@@ -59,34 +59,32 @@ try {
   await page.goto(BASE_URL, {waitUntil: 'networkidle'});
 
   await page.clock.fastForward(60_000);
-  await page.getByTestId('demo-start').waitFor({state: 'visible'});
+  await page.getByTestId('product-workspace').waitFor({state: 'visible'});
+  assert.equal(await page.getByTestId('product-workspace').getAttribute('data-product-state'), 'idle');
   assert.equal(await page.getByTestId('demo-stage').getAttribute('data-frame'), '0');
   assert.equal(await page.getByTestId('elapsed-time').count(), 0);
 
-  await page.getByRole('button', {name: '시연 시작'}).click();
-  const countdown = [];
-  countdown.push(await page.getByTestId('countdown').textContent());
-  await page.clock.fastForward(1_000);
-  countdown.push(await page.getByTestId('countdown').textContent());
-  await page.clock.fastForward(1_000);
-  countdown.push(await page.getByTestId('countdown').textContent());
-  assert.deepEqual(countdown, ['3', '2', '1']);
+  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
+  const states = [];
+  states.push(await page.getByTestId('product-workspace').getAttribute('data-product-state'));
+  await page.clock.fastForward(5_000);
+  states.push(await page.getByTestId('product-workspace').getAttribute('data-product-state'));
+  await page.clock.fastForward(7_000);
+  states.push(await page.getByTestId('product-workspace').getAttribute('data-product-state'));
+  await page.clock.fastForward(4_000);
+  states.push(await page.getByTestId('product-workspace').getAttribute('data-product-state'));
+  await page.clock.fastForward(6_100);
+  states.push(await page.getByTestId('product-workspace').getAttribute('data-product-state'));
+  assert.deepEqual(states, ['detecting', 'protecting', 'generating', 'inspecting', 'complete']);
 
-  await page.clock.fastForward(1_000);
-  const playbackStart = await page.evaluate(() => ({
-    frame: document.querySelector('[data-testid="demo-stage"]')?.getAttribute('data-frame'),
-    elapsed: document.querySelector('[data-testid="elapsed-time"]')?.textContent,
-  }));
-  assert.deepEqual(playbackStart, {frame: '0', elapsed: '00:00 / 00:30'});
-
-  await page.clock.fastForward(30_000);
-  await page.getByRole('button', {name: '다시 시연'}).waitFor({state: 'visible'});
+  await page.getByRole('button', {name: '새 상담 요약'}).waitFor({state: 'visible'});
   assert.equal(await page.getByTestId('demo-stage').getAttribute('data-frame'), '899');
-  assert.equal(await page.getByTestId('elapsed-time').textContent(), '00:30 / 00:30');
-  assert.equal(await page.getByRole('heading', {name: '시연이 끝났어요'}).count(), 1);
+  assert.equal(await page.getByTestId('verified-result').count(), 1);
+  assert.equal(await page.getByTestId('elapsed-time').count(), 0);
 
-  await page.getByRole('button', {name: '다시 시연'}).click();
-  assert.equal(await page.getByTestId('countdown').textContent(), '3');
+  await page.getByRole('button', {name: '새 상담 요약'}).click();
+  assert.equal(await page.getByTestId('product-workspace').getAttribute('data-product-state'), 'detecting');
+  assert.equal(await page.getByTestId('countdown').count(), 0);
 
   const storageWrites = await page.evaluate(() => window.__FPG_RECORDING_CHECK_WRITES__);
   assert.deepEqual(unexpectedRequests, [], 'normal walkthrough made a non-local or non-GET request');
@@ -94,12 +92,12 @@ try {
 
   const report = `# 화면 녹화 자동 시연 점검\n\n` +
     `이 기록은 화면 상태와 제어 흐름만 포함하며, 입력·응답 원문을 저장하지 않습니다.\n\n` +
-    `- 첫 화면 정지: 통과, 클릭 전 60초를 진행해도 프레임 0 유지\n` +
-    `- 사용자 시작: 통과, 시연 시작 버튼으로만 재생 진입\n` +
-    `- 준비 카운트다운: 통과, 3 → 2 → 1\n` +
-    `- 자동 안내 시작: 통과, 3.000초 뒤 프레임 0과 00:00 / 00:30 표시\n` +
-    `- 자동 안내 종료: 통과, 30.000초 뒤 프레임 899와 00:30 / 00:30 표시\n` +
-    `- 다시 시연: 통과, 동일한 3초 카운트다운으로 복귀\n` +
+    `- 첫 화면 정지: 통과, 클릭 전 60초를 진행해도 제품 화면과 프레임 0 유지\n` +
+    `- 사용자 시작: 통과, AI 상담 요약 만들기 버튼으로만 자동 처리 진입\n` +
+    `- 화면 타임라인: 없음, 경과시간과 카운트다운을 표시하지 않음\n` +
+    `- 제품 상태 전환: 통과, 탐지 → 보호 → AI 작성 → 응답 검사 → 결과 공개\n` +
+    `- 자동 처리 종료: 통과, 약 22초 뒤 프레임 899와 상담 요약 결과 표시\n` +
+    `- 새 상담 요약: 통과, 프레임 0의 탐지 상태로 재시작\n` +
     `- 외부 요청: 0건\n` +
     `- 브라우저 저장소 쓰기: 0건\n` +
     `- MP4 생성: 0건, Mac 화면 녹화용 일반 페이지로 확인\n`;

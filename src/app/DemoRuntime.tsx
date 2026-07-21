@@ -51,10 +51,12 @@ export type DemoRuntimeProps = {
   reducedMotion?: boolean;
   manualOnly?: boolean;
   recordingReady?: Promise<void>;
+  clock?: () => number;
   children(view: DemoRuntimeView): ReactNode;
 };
 
 const READY = Promise.resolve();
+const PERFORMANCE_CLOCK = () => performance.now();
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -66,6 +68,7 @@ export function DemoRuntime({
   reducedMotion = false,
   manualOnly = false,
   recordingReady = READY,
+  clock = PERFORMANCE_CLOCK,
   children,
 }: DemoRuntimeProps) {
   const [controller] = useState(
@@ -100,16 +103,16 @@ export function DemoRuntime({
 
   const actions = useMemo<RuntimeActions>(
     () => ({
-      start: () => setRuntime(controller.start(performance.now())),
+      start: () => setRuntime(controller.start(clock())),
       pause: () => setRuntime(controller.pause()),
-      resume: () => setRuntime(controller.resume(performance.now())),
-      replay: () => setRuntime(controller.replay(performance.now())),
+      resume: () => setRuntime(controller.resume(clock())),
+      replay: () => setRuntime(controller.replay(clock())),
       manual: () => setRuntime(controller.enterManual()),
       previous: () => setRuntime(controller.previous()),
       next: () => setRuntime(controller.next()),
       goTo: (frame) => setRuntime(controller.goTo(frame)),
     }),
-    [controller],
+    [clock, controller],
   );
 
   useEffect(() => {
@@ -117,8 +120,8 @@ export function DemoRuntime({
       return;
     }
     let requestId = 0;
-    const tick = (timestamp: number) => {
-      const next = controller.advance(timestamp);
+    const tick = () => {
+      const next = controller.advance(clock());
       setRuntime(next);
       if (next.phase === 'countdown' || next.phase === 'playing') {
         requestId = requestAnimationFrame(tick);
@@ -126,7 +129,7 @@ export function DemoRuntime({
     };
     requestId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(requestId);
-  }, [controller, recordingMode, runtime.phase]);
+  }, [clock, controller, recordingMode, runtime.phase]);
 
   useEffect(() => {
     if (recordingMode || (!manualOnly && !reducedMotion)) return;

@@ -218,15 +218,9 @@ describe('pure 990-frame timeline', () => {
     expect(stateAt(690, fixture).result?.kind).toBe('verified');
   });
 
-  it('keeps the future validation sample fixed while only revealing its card', () => {
-    expect(stateAt(809, fixture).validation).toEqual({progress: 0, people: 5, tasksPerPerson: 10});
-    expect(stateAt(810, fixture).validation).toEqual({progress: 0, people: 5, tasksPerPerson: 10});
-    expect(stateAt(820, fixture).validation).toEqual({
-      progress: expect.any(Number),
-      people: 5,
-      tasksPerPerson: 10,
-    });
-    expect(stateAt(834, fixture).validation).toEqual({progress: 1, people: 5, tasksPerPerson: 10});
-    expect(stateAt(899, fixture).validation).toEqual({progress: 1, people: 5, tasksPerPerson: 10});
+  it('keeps future validation sample claims out of every timeline state', () => {
+    for (const frame of [0, 45, 809, 820, 899, 989]) {
+      expect(stateAt(frame, fixture)).not.toHaveProperty('validation');
+    }
   });
 });

@@ -124,7 +124,7 @@ test.beforeEach(async ({page}) => {
   });
 });
 
-test('makes no application egress or browser storage writes across automatic, manual, block, and help states', async ({page}) => {
+test('makes no application egress or browser storage writes across automatic, result, block, and help states', async ({page}) => {
   const unexpectedRequests: string[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
@@ -137,12 +137,10 @@ test('makes no application egress or browser storage writes across automatic, ma
 
   await page.clock.install();
   await page.goto('./');
-  await page.getByRole('button', {name: '시연 시작'}).click();
-  await page.clock.fastForward(3_100);
-  await expect(page.getByRole('button', {name: '일시정지'})).toBeVisible();
-  await page.clock.fastForward(30_100);
-  await expect(page.getByRole('button', {name: '다시 시연'})).toBeVisible();
-  await page.getByRole('button', {name: '확인이 필요한 경우'}).click();
+  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
+  await page.clock.fastForward(22_100);
+  await expect(page.getByTestId('verified-result')).toBeVisible();
+  await page.getByRole('button', {name: '확인이 필요한 경우 보기'}).click();
   await expect(page.getByTestId('blocked-result')).toBeVisible();
   await page.getByRole('button', {name: '직접 작성 방법 보기'}).click();
   await expect(page.locator('.help-steps')).toBeVisible();

@@ -6,15 +6,15 @@ import {expect, test} from '@playwright/test';
 import {PNG} from 'pngjs';
 
 const REVIEWED_FRAMES = [45, 225, 360, 480, 610, 750, 855, 945] as const;
-const REVIEWED_HEADLINES = new Map<number, string>([
-  [45, '상담 직원의 AI 요약, 고객정보는 내부에 남겨야 합니다'],
-  [225, '이름·연락처·계좌가 한 문장에 섞여 있습니다'],
-  [360, '정보 유형에 맞게 보호합니다'],
-  [480, '이 정적 시연에서는 외부 AI·API 경로를 사용하지 않습니다'],
-  [610, '응답 전체를 확인하는 동안 결과는 열지 않습니다'],
-  [750, '확인된 요약과 직원 확인 항목을 함께 보여줍니다'],
-  [855, '입력 보호에서 끝나지 않고, 결과 공개 전까지 왕복 전체를 확인합니다'],
-  [945, '확인이 필요한 결과는 표시하지 않았어요'],
+const REVIEWED_STATES = new Map<number, string>([
+  [45, 'detecting'],
+  [225, 'protecting'],
+  [360, 'protecting'],
+  [480, 'generating'],
+  [610, 'inspecting'],
+  [750, 'complete'],
+  [855, 'complete'],
+  [945, 'withheld'],
 ]);
 const EXACT_RGBA_BASELINE =
   process.platform === 'darwin' && process.env.FPG_VISUAL_MODE !== 'structure';
@@ -26,14 +26,6 @@ const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const NAMED_REGRESSION_IMAGES = [
   ['artifacts/regression/07-type-protection-detail.png', 360],
   ['artifacts/regression/08-explicit-block.png', 945],
-] as const;
-const SUBMISSION_IMAGES = [
-  ['artifacts/submission/01-project-overview.png', 45, '.overview-dashboard'],
-  ['artifacts/submission/02-problem-gap.png', 150, '.gap-comparison'],
-  ['artifacts/submission/03-type-protection-route.png', 480, '.workbench-grid'],
-  ['artifacts/submission/04-output-withheld.png', 610, '.inspection-dashboard'],
-  ['artifacts/submission/05-verified-result.png', 750, '[data-testid="verified-result"]'],
-  ['artifacts/submission/06-innovation-and-evaluation.png', 855, '.finish-view'],
 ] as const;
 
 test.use({
@@ -63,21 +55,10 @@ for (const frame of REVIEWED_FRAMES) {
       return;
     }
 
-    const surfaceSelector = frame === 45
-      ? '.overview-dashboard'
-      : frame === 360
-        ? '.protection-matrix'
-        : frame === 610
-          ? '.inspection-dashboard'
-          : frame === 855
-            ? '.finish-view'
-            : frame === 945
-              ? '.blocked-layout'
-              : '.workbench-grid';
-    const layout = await page.evaluate((selector) => {
+    const layout = await page.evaluate(() => {
       const stage = document.querySelector<HTMLElement>('[data-testid="demo-stage"]')!;
-      const heading = document.querySelector<HTMLElement>('.scene-heading')!;
-      const surface = document.querySelector<HTMLElement>(selector)!;
+      const heading = document.querySelector<HTMLElement>('.workspace-heading')!;
+      const surface = document.querySelector<HTMLElement>('.product-workspace')!;
       const footer = document.querySelector<HTMLElement>('.app-footer')!;
       const stageRect = stage.getBoundingClientRect();
       const headingRect = heading.getBoundingClientRect();
@@ -85,6 +66,7 @@ for (const frame of REVIEWED_FRAMES) {
       const footerRect = footer.getBoundingClientRect();
       return {
         headingText: heading.querySelector('h1')?.textContent?.trim() ?? '',
+        productState: surface.dataset.productState,
         stage: {width: stageRect.width, height: stageRect.height},
         heading: {left: headingRect.left, right: headingRect.right, top: headingRect.top},
         surface: {
@@ -98,10 +80,11 @@ for (const frame of REVIEWED_FRAMES) {
         footerTop: footerRect.top,
         overflow: {width: stage.scrollWidth - stage.clientWidth, height: stage.scrollHeight - stage.clientHeight},
       };
-    }, surfaceSelector);
+    });
 
     expect(screenshotBytes.byteLength).toBeGreaterThan(100_000);
-    expect(layout.headingText).toBe(REVIEWED_HEADLINES.get(frame));
+    expect(layout.headingText).toBe('고객 상담 메모를 AI 상담 요약으로 정리합니다');
+    expect(layout.productState).toBe(REVIEWED_STATES.get(frame));
     expect(layout.stage).toEqual({width: 1_920, height: 1_080});
     expect(layout.overflow.width).toBeLessThanOrEqual(0);
     expect(layout.overflow.height).toBeLessThanOrEqual(0);
@@ -117,6 +100,30 @@ for (const frame of REVIEWED_FRAMES) {
   });
 }
 
+test('recording mode freezes every wall-clock animation', async ({page}) => {
+  await page.emulateMedia({reducedMotion: 'no-preference', colorScheme: 'light'});
+  await page.goto('?record=1');
+  await page.waitForFunction(() => '__FPG_RECORDING_V1__' in window);
+
+  for (const frame of [45, 480, 610]) {
+    await page.evaluate(
+      async (value) => window.__FPG_RECORDING_V1__!.setFrame(value),
+      frame,
+    );
+    const runningAnimations = await page.locator('.demo-stage--recording *').evaluateAll(
+      (elements) => elements
+        .map((element) => ({
+          className: element.getAttribute('class') ?? element.tagName,
+          animationName: getComputedStyle(element).animationName,
+          transitionDuration: getComputedStyle(element).transitionDuration,
+        }))
+        .filter(({animationName, transitionDuration}) =>
+          animationName !== 'none' || transitionDuration !== '0s'),
+    );
+    expect(runningAnimations).toEqual([]);
+  }
+});
+
 test('named regression images preserve the required file contract', async () => {
   for (const [relativePath, frame] of NAMED_REGRESSION_IMAGES) {
     const artifactPath = path.join(ROOT, relativePath);
@@ -131,27 +138,3 @@ test('named regression images preserve the required file contract', async () => 
     expect(Buffer.from(artifact.data).equals(Buffer.from(baseline.data))).toBe(true);
   }
 });
-
-for (const [relativePath, frame, selector] of SUBMISSION_IMAGES) {
-  test(`${relativePath} maps semantically and pixel-exactly to frame ${frame}`, async ({page}) => {
-    await page.emulateMedia({reducedMotion: 'no-preference', colorScheme: 'light'});
-    await page.goto('?record=1');
-    await page.waitForFunction(() => '__FPG_RECORDING_V1__' in window);
-    await page.evaluate(
-      async (value) => window.__FPG_RECORDING_V1__!.setFrame(value),
-      frame,
-    );
-    await expect(page.locator(selector)).toBeVisible();
-    await page.mouse.move(1_919, 1_079);
-    const liveBytes = await page.getByTestId('demo-stage').screenshot();
-    const artifactPath = path.join(ROOT, relativePath);
-    const artifactBytes = await readFile(artifactPath);
-    const artifact = PNG.sync.read(artifactBytes);
-
-    expect((await stat(artifactPath)).size).toBeGreaterThan(100_000);
-    expect({width: artifact.width, height: artifact.height}).toEqual({width: 1_920, height: 1_080});
-    if (EXACT_RGBA_BASELINE) {
-      expect(Buffer.from(PNG.sync.read(liveBytes).data).equals(Buffer.from(artifact.data))).toBe(true);
-    }
-  });
-}

@@ -45,6 +45,7 @@ const ROOT_FILES = new Set([
 const SOURCE_PATHS = [
   /^\.github\/CODEOWNERS$/u,
   /^\.github\/workflows\/(?:ci|pages)\.yml$/u,
+  /^public\/favicon\.svg$/u,
   /^public\/fonts\/PrivacyDemoSans-(?:Regular|Bold)\.woff2$/u,
   /^artifacts\/regression\/(?:07-type-protection-detail|08-explicit-block)\.png$/u,
   /^scripts\/[a-z0-9-]+\.mjs$/u,

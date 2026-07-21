@@ -13,7 +13,7 @@ The two local WOFF2 files are Modified Versions of the Korean region-specific su
 - Source Regular OTF SHA-256: `69975a0ac8472717870aefeab0a4d52739308d90856b9955313b2ad5e0148d68`
 - Source Bold OTF SHA-256: `5a6ceb287ed2fc6cfc6213144ebea68cbd94b20fc9eb873d8486493bf02d9bda`
 - License SHA-256: `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`
-- Conversion date: `2026-07-20`
+- Conversion date: `2026-07-21`
 - Conversion tool: `fonttools 4.60.2`
 - WOFF2 encoder dependency: `Brotli 1.1.0`, installed only in the temporary conversion environment
 - Rendered glyph source: every string value in `src/content/copy.ts` and `src/demo/fixtures/synthetic-consultation-v1.json`, deduplicated as UTF-8 code points
@@ -54,8 +54,8 @@ Exact Bold preparation and subset commands:
 
 Output SHA-256:
 
-- `PrivacyDemoSans-Regular.woff2`: `afdbb521c41d1dcdb8235a624de8cda94c023c0582292f0de998f90cf1f463d3`
-- `PrivacyDemoSans-Bold.woff2`: `7c6ca3e9eda6feefba77d885f086c3109acc03facec254d94bb0226adaf7845e`
+- `PrivacyDemoSans-Regular.woff2`: `d39b657c437553d8d784e6e81ab1be1a4dfa372735c9137fc8702c7c7771ea33`
+- `PrivacyDemoSans-Bold.woff2`: `4aaaae155142d793fcfb581cc56f773d573f9dd9a5c91265c920031bb6a13d41`
 
 The source zip, source OTF files, temporary renamed OTF files, and temporary glyph list are not committed.
 

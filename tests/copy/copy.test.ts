@@ -218,14 +218,35 @@ function fontNames(fontPath: string): string[] {
 }
 
 describe('rendered copy contract', () => {
+  it('uses product-workspace copy without the retired validation-plan story', () => {
+    const rendered = collectStrings(COPY).join('\n');
+
+    expect(rendered).toContain('AI 상담 요약 만들기');
+    expect(rendered).toContain('AI가 상담 요약을 작성하고 있어요');
+    expect(rendered).toContain('상담 요약이 준비되었습니다');
+    expect(rendered).toContain('제품 콘셉트 데모 | 합성 예시 데이터');
+
+    for (const removed of [
+      '현업 대표 5명',
+      '1인당 합성 과업 10건 이상',
+      '실측 전 교차시험 설계',
+      '검증 예정',
+      '미실시',
+      '30초 시연',
+    ]) {
+      expect(rendered, `retired demo copy: ${removed}`).not.toContain(removed);
+    }
+  });
+
   it('keeps reviewed product, scope, and five result fields exact', async () => {
     const fixture = await validateFixture(readFileSync(fixturePath, 'utf8'));
 
-    expect(COPY.product.name).toBe('금융 AI 개인정보 보호 게이트웨이');
+    expect(COPY.product.name).toBe('단디 DANDI');
+    expect(COPY.product.category).toBe('금융 AI 개인정보 보호 게이트웨이');
     expect(COPY.product.memoryLine).toBe('허용된 업무만, 확인된 결과만');
     expect(COPY.verifiedResult).toEqual(fixture.verifiedResult);
-    expect(COPY.scope.official).toContain('가상의 합성데이터');
-    expect(COPY.scope.official).toContain('제품 성능과 운영 검증 결과를 뜻하지 않습니다');
+    expect(COPY.scope.official).toBe('제품 콘셉트 데모 | 합성 예시 데이터');
+    expect(COPY.scope.detail).toContain('실제 고객정보와 금융 시스템에는 연결되지 않습니다');
   });
 
   it('records durable exact font provenance without placeholders or temporary helpers', () => {

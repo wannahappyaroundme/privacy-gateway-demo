@@ -6,8 +6,8 @@ import {createElement} from 'react';
 import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 
 import {
+  AUTO_DURATION_MS,
   PlaybackController,
-  countdownLabelAt,
   entryPhaseOnLoad,
   frameAt,
   nextStop,
@@ -31,23 +31,24 @@ beforeAll(async () => {
 });
 
 describe('logical playback contract', () => {
-  it('maps logical media time to the 900-frame automatic story', () => {
+  it('maps the product flow to a 22-second 900-frame recording story', () => {
+    expect(AUTO_DURATION_MS).toBe(22_000);
     expect(frameAt(0)).toBe(0);
-    expect(frameAt(29_966.67)).toBe(899);
-    expect(frameAt(30_000)).toBe(899);
+    expect(frameAt(21_999)).toBe(899);
+    expect(frameAt(22_000)).toBe(899);
     expect(frameAt(Number.POSITIVE_INFINITY)).toBe(899);
     expect(() => frameAt(-1)).toThrow(RangeError);
   });
 
-  it('starts idle and exposes an exact three-second countdown', () => {
+  it('starts idle without a countdown', () => {
     expect(entryPhaseOnLoad()).toBe('idle');
-    expect(countdownLabelAt(0)).toBe('3');
-    expect(countdownLabelAt(999.99)).toBe('3');
-    expect(countdownLabelAt(1_000)).toBe('2');
-    expect(countdownLabelAt(2_000)).toBe('1');
-    expect(countdownLabelAt(2_999.99)).toBe('1');
-    expect(countdownLabelAt(3_000)).toBeNull();
-    expect(() => countdownLabelAt(-1)).toThrow(RangeError);
+    const controller = new PlaybackController();
+    expect(controller.start(1_000)).toMatchObject({
+      phase: 'playing',
+      frame: 0,
+      elapsedMs: 0,
+      countdownLabel: null,
+    });
   });
 
   it('navigates only between reviewed manual stops', () => {
@@ -56,64 +57,60 @@ describe('logical playback contract', () => {
     expect(previousStop(945)).toBe(855);
     expect(previousStop(45)).toBe(45);
     expect(playableFrameAfter(899, 1_000)).toBe(899);
-    expect(playableFrameAfter(750, 1_000)).toBe(780);
+    expect(playableFrameAfter(750, 1_000)).toBe(790);
   });
 });
 
 describe('PlaybackController', () => {
-  it('waits for a click, counts down, plays, and completes without crossing frame 899', () => {
+  it('waits for a click, plays immediately, and completes without crossing frame 899', () => {
     const onChange = vi.fn();
     const controller = new PlaybackController({onChange});
 
     expect(controller.getState()).toMatchObject({phase: 'idle', frame: 0});
     controller.start(10_000);
-    expect(controller.getState()).toMatchObject({phase: 'countdown', countdownLabel: '3'});
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 0, countdownLabel: null});
     controller.advance(11_000);
-    expect(controller.getState()).toMatchObject({phase: 'countdown', countdownLabel: '2'});
-    controller.advance(12_000);
-    expect(controller.getState()).toMatchObject({phase: 'countdown', countdownLabel: '1'});
-    controller.advance(13_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 0, elapsedMs: 0});
-    controller.advance(42_999.99);
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 40, elapsedMs: 1_000});
+    controller.advance(31_999);
     expect(controller.getState()).toMatchObject({phase: 'playing', frame: 899});
-    controller.advance(43_000);
-    expect(controller.getState()).toMatchObject({phase: 'complete', frame: 899, elapsedMs: 30_000});
+    controller.advance(32_000);
+    expect(controller.getState()).toMatchObject({phase: 'complete', frame: 899, elapsedMs: 22_000});
     expect(onChange).toHaveBeenCalled();
   });
 
-  it('shows frame zero even when the first paint after countdown is delayed', () => {
+  it('advances from the click epoch when the first paint is delayed', () => {
     const controller = new PlaybackController();
     controller.start(10_000);
 
     expect(controller.advance(13_250)).toMatchObject({
       phase: 'playing',
-      frame: 0,
-      elapsedMs: 0,
+      frame: 132,
+      elapsedMs: 3_250,
     });
-    expect(controller.advance(14_250)).toMatchObject({phase: 'playing', frame: 30});
+    expect(controller.advance(14_250)).toMatchObject({phase: 'playing', frame: 173});
   });
 
-  it('replays through the same countdown and never auto resumes after visibility loss', () => {
+  it('replays immediately and never auto resumes after visibility loss', () => {
     const controller = new PlaybackController();
     controller.start(0);
     controller.advance(3_000);
     controller.advance(8_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 150});
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 327});
 
     controller.handleVisibilityHidden();
     const paused = controller.getState();
-    expect(paused).toMatchObject({phase: 'paused', frame: 150});
+    expect(paused).toMatchObject({phase: 'paused', frame: 327});
     controller.advance(20_000);
     expect(controller.getState()).toEqual(paused);
 
     controller.resume(20_000);
     controller.advance(21_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 180});
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 368});
 
     controller.replay(30_000);
-    expect(controller.getState()).toMatchObject({phase: 'countdown', frame: 0, countdownLabel: '3'});
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 0, countdownLabel: null});
     controller.handleVisibilityHidden();
-    expect(controller.getState()).toMatchObject({phase: 'idle', frame: 0});
+    expect(controller.getState()).toMatchObject({phase: 'paused', frame: 0});
   });
 
   it('uses manual mode for reduced motion and supports reviewed navigation', () => {
@@ -136,9 +133,9 @@ describe('PlaybackController', () => {
     controller.advance(3_000);
     controller.advance(11_200);
 
-    expect(controller.enterManual()).toMatchObject({phase: 'manual', frame: 225});
-    expect(controller.resume(20_000)).toMatchObject({phase: 'playing', frame: 225});
-    expect(controller.advance(21_000)).toMatchObject({phase: 'playing', frame: 255});
+    expect(controller.enterManual()).toMatchObject({phase: 'manual', frame: 360});
+    expect(controller.resume(20_000)).toMatchObject({phase: 'playing', frame: 360});
+    expect(controller.advance(21_000)).toMatchObject({phase: 'playing', frame: 400});
 
     controller.goTo(945);
     expect(controller.resume(22_000)).toMatchObject({phase: 'manual', frame: 945});
@@ -150,7 +147,7 @@ describe('PlaybackController', () => {
     controller.advance(3_000);
     controller.advance(8_000);
 
-    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 150});
+    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 327});
     expect(controller.replay(20_000)).toMatchObject({phase: 'manual', frame: 45});
   });
 
@@ -160,9 +157,9 @@ describe('PlaybackController', () => {
     controller.advance(3_000);
     const playing = controller.advance(3_080);
 
-    expect(playing).toMatchObject({phase: 'playing', frame: 2, elapsedMs: 80});
-    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 2, elapsedMs: 80});
-    expect(controller.advance(10_000)).toMatchObject({phase: 'manual', frame: 2, elapsedMs: 80});
+    expect(playing).toMatchObject({phase: 'playing', frame: 126, elapsedMs: 3_080});
+    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 126, elapsedMs: 3_080});
+    expect(controller.advance(10_000)).toMatchObject({phase: 'manual', frame: 126, elapsedMs: 3_080});
   });
 });
 
@@ -270,6 +267,48 @@ describe('recording bridge contract', () => {
 });
 
 describe('DemoRuntime layering', () => {
+  it('uses one injected clock instead of the animation-frame timestamp', () => {
+    const callbacks: FrameRequestCallback[] = [];
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        callbacks.push(callback);
+        return callbacks.length;
+      });
+    const cancelFrame = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => undefined);
+    const clock = vi
+      .fn<() => number>()
+      .mockReturnValueOnce(100.2)
+      .mockReturnValueOnce(100.3);
+
+    try {
+      render(
+        createElement(DemoRuntime, {
+          bootstrap: {kind: 'ready', fixture},
+          clock,
+          children: ({runtime, actions}: DemoRuntimeView) =>
+            createElement(
+              'div',
+              null,
+              createElement('output', {'data-testid': 'phase'}, `${runtime.phase}:${runtime.frame}`),
+              createElement('button', {type: 'button', onClick: actions.start}, 'AI 상담 요약 만들기'),
+            ),
+        }),
+      );
+
+      fireEvent.click(screen.getByRole('button', {name: 'AI 상담 요약 만들기'}));
+      expect(callbacks).toHaveLength(1);
+      expect(() => act(() => callbacks.shift()!(100.1))).not.toThrow();
+      expect(clock).toHaveBeenCalledTimes(2);
+    } finally {
+      cleanup();
+      requestFrame.mockRestore();
+      cancelFrame.mockRestore();
+    }
+  });
+
   it('renders idle without advancing and enters manual mode on reduced-motion start', () => {
     render(
       createElement(DemoRuntime, {
@@ -308,7 +347,7 @@ describe('DemoRuntime layering', () => {
       }),
     );
     fireEvent.click(screen.getByRole('button', {name: '시연 시작'}));
-    expect(screen.getByTestId('phase')).toHaveTextContent('countdown:0');
+    expect(screen.getByTestId('phase')).toHaveTextContent('playing:0');
 
     view.rerender(
       createElement(DemoRuntime, {
@@ -317,7 +356,7 @@ describe('DemoRuntime layering', () => {
         children,
       }),
     );
-    await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('manual:45'));
+    await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('manual:0'));
   });
 
   it('publishes a fail-closed recording bridge, ignores keys, and commits the same frame', async () => {

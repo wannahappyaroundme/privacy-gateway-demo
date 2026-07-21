@@ -20,6 +20,7 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     exclude: [
       ...configDefaults.exclude,
+      '.worktrees/**',
       'tests/browser/**',
       'tests/accessibility/**',
       'tests/visual/**',

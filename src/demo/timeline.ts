@@ -7,31 +7,12 @@ import type {
   SceneId,
   TimelineResult,
   TimelineState,
-  ValidationPlanState,
   VirtualPointerState,
 } from './state';
 
 export type {TimelineResult, TimelineState} from './state';
 
 export const MANUAL_STOPS = [45, 150, 225, 360, 480, 610, 750, 855, 945] as const;
-
-export const SCENE_STEPS = [
-  {scene: 'overview', startFrame: 0, manualStop: 45},
-  {scene: 'gap', startFrame: 90, manualStop: 150},
-  {scene: 'detect', startFrame: 180, manualStop: 225},
-  {scene: 'protect', startFrame: 300, manualStop: 360},
-  {scene: 'route', startFrame: 420, manualStop: 480},
-  {scene: 'inspect', startFrame: 540, manualStop: 610},
-  {scene: 'result', startFrame: 690, manualStop: 750},
-  {scene: 'finish', startFrame: 810, manualStop: 855},
-  {scene: 'withheld', startFrame: 900, manualStop: 945},
-] as const satisfies readonly {
-  scene: SceneId;
-  startFrame: number;
-  manualStop: (typeof MANUAL_STOPS)[number];
-}[];
-
-export const PUBLIC_PLAYBACK_POINTER_OFFSET_Y = 88;
 
 export const HOLD_RANGES = [
   [30, 60],
@@ -77,20 +58,16 @@ function lerp(from: number, to: number, amount: number): number {
   return from + (to - from) * amount;
 }
 
-export function sceneStepIndexAt(frame: number): number {
-  assertFrame(frame);
-  return SCENE_STEPS.reduce(
-    (selected, step, index) => (frame >= step.startFrame ? index : selected),
-    0,
-  );
-}
-
-export function sceneStepIndexFor(scene: SceneId): number {
-  return SCENE_STEPS.findIndex((step) => step.scene === scene);
-}
-
 function sceneAt(frame: number): SceneId {
-  return SCENE_STEPS[sceneStepIndexAt(frame)].scene;
+  if (frame < 90) return 'overview';
+  if (frame < 180) return 'gap';
+  if (frame < 300) return 'detect';
+  if (frame < 420) return 'protect';
+  if (frame < 540) return 'route';
+  if (frame < 690) return 'inspect';
+  if (frame < 810) return 'result';
+  if (frame < 900) return 'finish';
+  return 'withheld';
 }
 
 function pointerAt(frame: number): VirtualPointerState {
@@ -160,15 +137,6 @@ function inspectionAt(frame: number): InspectionState {
   };
 }
 
-function validationAt(frame: number): ValidationPlanState {
-  const validationProgress = progress(frame, 810, 834);
-  return {
-    progress: validationProgress,
-    people: 5,
-    tasksPerPerson: 10,
-  };
-}
-
 function stageScrollAt(frame: number): number {
   const scrollProgress = progress(frame, 180, 209);
   return scrollProgress === 0 ? 0 : -80 * scrollProgress;
@@ -209,7 +177,6 @@ export function stateAt(frame: number, fixture: ValidatedFixture): TimelineState
     route: routeAt(frame),
     inspection: inspectionAt(frame),
     resultRevealProgress: frame >= 690 && frame <= 899 ? progress(frame, 690, 734) : 0,
-    validation: validationAt(frame),
     accessibilityStatus: accessibilityStatusAt(scene),
     result: resultAt(frame, fixture),
   };

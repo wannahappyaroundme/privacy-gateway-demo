@@ -2,6 +2,7 @@ import {COPY} from '../content/copy';
 
 type BlockedResultPanelProps = {
   reason: string;
+  marker: string;
   helpExpanded: boolean;
   onPrevious(): void;
   onHelp(): void;
@@ -10,6 +11,7 @@ type BlockedResultPanelProps = {
 
 export function BlockedResultPanel({
   reason,
+  marker,
   helpExpanded,
   onPrevious,
   onHelp,
@@ -30,7 +32,7 @@ export function BlockedResultPanel({
       </div>
       <div className="blocked-result__marker" aria-label="변형된 보호용 표시 예시">
         <span>보호용 표시 확인</span>
-        <code>__FPG_ACCOUNT_0001</code>
+        <code>{marker}</code>
         <strong>형태가 달라짐</strong>
       </div>
 

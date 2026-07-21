@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
   "status": "public-release-approved",
-  "fixtureSha256": "eb06cc37bdca9203ac726c5e9751dfc2ab4a41424a4f7321c5b3833250b33b2c",
-  "copySha256": "032b1db5d344fea7aa3126eac2a191cd9e3596fc3926b23225e167dd1c89e39d",
-  "approvedSourceSha256": "fba2dc01ef2a32cf51a5cba29244fdc6b20f284701ea653697ea81c4e7cc7dd8",
-  "reviewer": "Owner explicit public deployment approval",
-  "approvedAt": "2026-07-21T07:29:28.000Z"
+  "fixtureSha256": "de7d26ba45e7c026fb02ff84facf136d80dffcc0b57110df2a0a352268a511b9",
+  "copySha256": "7b75b85bf24510e79b8eaa433afad816117480557a5d4d3f3205848dcf2d4364",
+  "approvedSourceSha256": "6712a63ac37e8511c1759f2005049f226aa32cdde584abc134ef83e920df4d6c",
+  "reviewer": "Owner approval after product demo and favicon review",
+  "approvedAt": "2026-07-21T15:25:18.000Z"
 }
