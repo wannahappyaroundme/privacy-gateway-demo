@@ -1,16 +1,32 @@
 export const COPY = {
   product: {
-    name: '금융 AI 개인정보 보호 게이트웨이',
+    name: '단디 DANDI',
+    category: '금융 AI 개인정보 보호 게이트웨이',
     introduction:
       '금융 직원의 AI 요청에서 고객정보를 내부에서 보호하고, AI 응답을 다시 검사해 확인된 업무 결과만 보여주도록 설계한 온프레미스 보호 계층 제안',
     memoryLine: '허용된 업무만, 확인된 결과만',
   },
   scope: {
-    badges: ['가상 사례로 보는 작동 예시', '실제 고객정보·외부 AI 연결 없음'],
-    official:
-      '가상의 합성데이터로 동작 개념을 설명하는 정적 시뮬레이션입니다. 실제 AI, 금융 시스템, 고객정보에 연결되지 않으며 제품 성능과 운영 검증 결과를 뜻하지 않습니다.',
+    badges: ['은행 상담 업무', '개인정보 보호 적용'],
+    official: '제품 콘셉트 데모 | 합성 예시 데이터',
+    detail:
+      '이 화면은 합성 예시 데이터로 단디의 제품 흐름을 보여줍니다. 실제 고객정보와 금융 시스템에는 연결되지 않습니다.',
     hosting:
-      '이 데모 코드는 별도 분석 도구나 사용자 입력 수집을 사용하지 않습니다. 다만 GitHub Pages 운영 과정에서 GitHub가 접속 IP 등 사용 정보를 처리할 수 있습니다.',
+      'GitHub Pages 이용 과정에서 GitHub가 접속 정보를 처리할 수 있습니다.',
+  },
+  workspace: {
+    title: '고객 상담 메모를 AI 상담 요약으로 정리합니다',
+    description: '단디가 개인정보를 보호한 뒤 승인된 AI 업무 경로로 전달합니다.',
+    start: 'AI 상담 요약 만들기',
+    detecting: '개인정보를 찾고 있어요',
+    protecting: '정보 유형에 맞게 보호하고 있어요',
+    generating: 'AI가 상담 요약을 작성하고 있어요',
+    inspecting: '돌아온 응답 전체를 확인하고 있어요',
+    complete: '상담 요약이 준비되었습니다',
+    pass: '정책 통과',
+    completeDescription: '확인된 결과만 업무 화면에 표시했습니다.',
+    reset: '새 상담 요약',
+    withheld: '확인이 필요한 경우 보기',
   },
   panels: {
     case: '합성 상담 사례',
@@ -27,7 +43,7 @@ export const COPY = {
     next: '다음',
     manual: '단계별 보기',
     blockExample: '확인이 필요한 경우',
-    summarize: '상담 정리',
+    summarize: 'AI 상담 요약 만들기',
   },
   steps: [
     '개요',
@@ -37,7 +53,7 @@ export const COPY = {
     '승인 경로',
     '전체 응답 검사',
     '확인된 결과',
-    '혁신과 검증 예정',
+    '업무 결과',
     '확인이 필요한 경우',
   ],
   sceneHeadlines: {
@@ -130,8 +146,7 @@ export const COPY = {
       evidence: '합성 상담 메모',
     },
   ],
-  resultEffect:
-    '예상 업무 변화, 실측 전: 개인정보 직접 삭제와 화면 전환 감소 여부를 검증합니다',
+  resultEffect: '직원이 확인할 항목은 구분해서 함께 보여줍니다',
   blocked: {
     eyebrow: '결과 미공개',
     title: '보호용 표시가 달라 결과를 열지 않았어요',
@@ -148,15 +163,15 @@ export const COPY = {
     externalValue: '별도 AI·API 연결 없음',
     beforeInspectionLabel: '검사 전 결과',
     beforeInspectionValue: '표시하지 않음',
-    operationalLabel: '제품·운영 검증',
-    operationalValue: '미실시',
+    operationalLabel: '화면 범위',
+    operationalValue: '제품 콘셉트',
   },
   validation: {
-    title: '검증 예정',
-    people: '현업 대표 5명',
-    tasks: '1인당 합성 과업 10건 이상',
-    comparison: '수작업 방식과 게이트웨이 방식을 번갈아 수행',
-    measures: ['개인정보 정리시간', '전체 과업시간', '누락', '과차단', '재작업'],
+    title: '은행 상담 업무',
+    people: '상담 메모',
+    tasks: 'AI 상담 요약',
+    comparison: '개인정보 보호부터 결과 확인까지 한 화면에서 이어집니다',
+    measures: ['정보 찾기', '유형별 보호', 'AI 작성', '응답 검사', '결과 공개'],
   },
   bootstrap: {
     loading: '합성 사례를 확인하고 있어요',

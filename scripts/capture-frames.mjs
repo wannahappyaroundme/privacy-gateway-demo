@@ -12,13 +12,12 @@ const BASE_URL = 'http://127.0.0.1:4174/privacy-gateway-demo/';
 const FRAMES = [45, 225, 360, 480, 610, 750, 855, 945];
 const SUBMISSION_FILES = new Map([
   [45, '01-project-overview.png'],
-  [150, '02-problem-gap.png'],
+  [225, '02-problem-gap.png'],
   [480, '03-type-protection-route.png'],
   [610, '04-output-withheld.png'],
   [750, '05-verified-result.png'],
   [855, '06-innovation-and-evaluation.png'],
 ]);
-const CAPTURE_FRAMES = [...new Set([...FRAMES, ...SUBMISSION_FILES.keys()])].sort((a, b) => a - b);
 const REGRESSION_FILES = new Map([
   [360, '07-type-protection-detail.png'],
   [945, '08-explicit-block.png'],
@@ -119,13 +118,11 @@ try {
   };
   const unexpectedRequests = [];
 
-  for (const frame of CAPTURE_FRAMES) {
+  for (const frame of FRAMES) {
     const firstBytes = await captureContextFrame(browser, contextOptions, unexpectedRequests, frame);
     const secondBytes = await captureContextFrame(browser, contextOptions, unexpectedRequests, frame);
     assertSameRgba(firstBytes, secondBytes, frame);
-    if (FRAMES.includes(frame)) {
-      await writeFile(path.join(BASELINE_DIR, `${frame}.png`), firstBytes);
-    }
+    await writeFile(path.join(BASELINE_DIR, `${frame}.png`), firstBytes);
 
     const submissionName = SUBMISSION_FILES.get(frame);
     if (submissionName !== undefined) {

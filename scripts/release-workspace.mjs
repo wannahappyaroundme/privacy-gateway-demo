@@ -6,6 +6,7 @@ import {isAllowedRepositoryPath, isAllowedSourcePath} from './release-policy.mjs
 const EXCLUDED_DIRECTORIES = new Set([
   '.git',
   '.superpowers',
+  '.worktrees',
   'coverage',
   'dist',
   'node_modules',
@@ -24,7 +25,7 @@ async function walk(root, current = '') {
       if (!EXCLUDED_DIRECTORIES.has(entry.name)) files.push(...(await walk(root, relative)));
       continue;
     }
-    if (entry.isFile()) files.push(relative);
+    if (entry.isFile() && relative !== '.git') files.push(relative);
   }
   return files;
 }

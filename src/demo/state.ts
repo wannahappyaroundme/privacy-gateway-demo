@@ -40,12 +40,6 @@ export type InspectionState = {
   disclosureAllowed: boolean;
 };
 
-export type ValidationPlanState = {
-  progress: number;
-  people: number;
-  tasksPerPerson: number;
-};
-
 export type VerifiedField = Readonly<ValidatedFixture['verifiedResult'][number]>;
 
 export type TimelineResult =
@@ -65,7 +59,6 @@ export type TimelineState = {
   route: RouteState;
   inspection: InspectionState;
   resultRevealProgress: number;
-  validation: ValidationPlanState;
   accessibilityStatus: string;
   result: TimelineResult;
 };

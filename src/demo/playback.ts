@@ -1,7 +1,7 @@
 import {MANUAL_STOPS} from './timeline';
 
 export const AUTO_END_FRAME = 899;
-export const AUTO_DURATION_MS = 30_000;
+export const AUTO_DURATION_MS = 22_000;
 export const COUNTDOWN_DURATION_MS = 3_000;
 
 export type EntryPhase =
@@ -77,7 +77,10 @@ export function frameAt(mediaTimeMs: number): number {
     throw new RangeError('Media time must be non-negative');
   }
   if (!Number.isFinite(mediaTimeMs) || mediaTimeMs >= AUTO_DURATION_MS) return AUTO_END_FRAME;
-  return Math.min(AUTO_END_FRAME, Math.floor((mediaTimeMs * 30) / 1_000));
+  return Math.min(
+    AUTO_END_FRAME,
+    Math.floor((mediaTimeMs * (AUTO_END_FRAME + 1)) / AUTO_DURATION_MS),
+  );
 }
 
 export function playableFrameAfter(frame: number, deltaMs: number): number {
@@ -86,7 +89,10 @@ export function playableFrameAfter(frame: number, deltaMs: number): number {
   }
   if (Number.isNaN(deltaMs) || deltaMs < 0) throw new RangeError('Delta must be non-negative');
   if (!Number.isFinite(deltaMs)) return AUTO_END_FRAME;
-  return Math.min(AUTO_END_FRAME, frame + Math.floor((deltaMs * 30) / 1_000));
+  return Math.min(
+    AUTO_END_FRAME,
+    frame + Math.floor((deltaMs * (AUTO_END_FRAME + 1)) / AUTO_DURATION_MS),
+  );
 }
 
 export function nextStop(frame: number): number {
@@ -148,9 +154,9 @@ export class PlaybackController {
   start(now: number): RuntimeState {
     assertTimestamp(now);
     if (this.#manualOnly) return this.#set({phase: 'manual', frame: 45, elapsedMs: 0, countdownLabel: null});
-    this.#countdownEpoch = now;
-    this.#playbackEpoch = null;
-    return this.#set({phase: 'countdown', frame: 0, elapsedMs: 0, countdownLabel: '3'});
+    this.#countdownEpoch = null;
+    this.#playbackEpoch = now;
+    return this.#set({phase: 'playing', frame: 0, elapsedMs: 0, countdownLabel: null});
   }
 
   advance(now: number): RuntimeState {
@@ -216,7 +222,15 @@ export class PlaybackController {
     assertManualFrame(frame);
     this.#countdownEpoch = null;
     this.#playbackEpoch = null;
-    return this.#set({phase: 'manual', frame, elapsedMs: Math.min(AUTO_DURATION_MS, frame * (1_000 / 30)), countdownLabel: null});
+    return this.#set({
+      phase: 'manual',
+      frame,
+      elapsedMs: Math.min(
+        AUTO_DURATION_MS,
+        (frame * AUTO_DURATION_MS) / (AUTO_END_FRAME + 1),
+      ),
+      countdownLabel: null,
+    });
   }
 
   enterManual(): RuntimeState {

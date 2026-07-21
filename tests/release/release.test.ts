@@ -87,6 +87,17 @@ describe('public release policy', () => {
     expect(resourceOffsets.every((offset) => cspOffset < offset)).toBe(true);
   });
 
+  it('declares a repository-scoped favicon that is included in the public release', async () => {
+    const html = readFileSync('index.html', 'utf8');
+    const policy = await loadReleasePolicy();
+
+    expect(html).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/privacy-gateway-demo/favicon.svg" />',
+    );
+    expect(existsSync('public/favicon.svg')).toBe(true);
+    expect(policy.isAllowedSourcePath('public/favicon.svg')).toBe(true);
+  });
+
   it('provides every guarded release file', () => {
     for (const path of [
       '.github/CODEOWNERS',
@@ -133,6 +144,11 @@ describe('public release policy', () => {
     const vite = readFileSync('vite.config.ts', 'utf8');
     expect(vite).toContain('modulePreload: {polyfill: false}');
     expect(vite).toContain('sourcemap: false');
+  });
+
+  it('keeps nested Git worktrees outside unit-test discovery', () => {
+    const vite = readFileSync('vite.config.ts', 'utf8');
+    expect(vite).toContain("'.worktrees/**'");
   });
 
   it('uses only reviewed full-SHA action pins', () => {
