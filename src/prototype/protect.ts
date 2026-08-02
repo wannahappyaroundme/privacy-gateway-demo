@@ -27,7 +27,7 @@ export type ProtectionResult = Readonly<{
   protectedText?: string;
 }>;
 
-const RESERVED_MARKER = /\[합성_(?:연락처|계좌)_[0-9]{2}\]/u;
+const RESERVED_OUTPUT = /가상고객[A-Z]|\[합성_(?:연락처|계좌)_[0-9]+\]/u;
 
 function runFailed(reason: string): never {
   throw new Error(`RUN_FAILED: ${reason}`);
@@ -35,6 +35,11 @@ function runFailed(reason: string): never {
 
 function matchingRule(detection: SyntheticDetection): Rule | undefined {
   return RULES.find((rule) => rule.type === detection.type && rule.action === detection.action);
+}
+
+function matchesFullGrammar(rule: Rule, rawValue: string): boolean {
+  const flagsWithoutGlobal = rule.pattern.flags.replace('g', '');
+  return new RegExp(`^(?:${rule.pattern.source})$`, flagsWithoutGlobal).test(rawValue);
 }
 
 function hasSyntheticResidue(text: string): boolean {
@@ -46,8 +51,8 @@ function validateSourceText(sourceText: string): void {
     runFailed('empty synthetic source text');
   }
 
-  if (RESERVED_MARKER.test(sourceText)) {
-    runFailed('reserved protection marker in source text');
+  if (RESERVED_OUTPUT.test(sourceText)) {
+    runFailed('reserved protection output in source text');
   }
 }
 
@@ -59,6 +64,7 @@ function validateDetections(sourceText: string, detections: readonly SyntheticDe
     const rule = matchingRule(detection);
     if (
       !rule ||
+      !matchesFullGrammar(rule, detection.rawValue) ||
       detection.start < 0 ||
       detection.end <= detection.start ||
       detection.end > sourceText.length ||

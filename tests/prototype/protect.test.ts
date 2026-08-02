@@ -66,6 +66,14 @@ describe('synthetic identifier detection and protection', () => {
     expect(() => protectSyntheticText('가상고객-A님 [합성_연락처_01]')).toThrow('RUN_FAILED');
   });
 
+  it.each([
+    '가상고객-A님과 가상고객A님',
+    '합성연락처-001 [합성_연락처_100]',
+    '합성계좌-001 [합성_계좌_100]',
+  ])('fails before transform when source text contains reserved output %s', (sourceText) => {
+    expect(() => protectSyntheticText(sourceText)).toThrow('RUN_FAILED');
+  });
+
   it('fails when caller-supplied spans overlap or escape the source bounds', () => {
     const overlapping: readonly SyntheticDetection[] = [
       {type: 'name', action: 'surrogate', rawValue: '가상고객-A', start: 0, end: 6},
@@ -77,6 +85,31 @@ describe('synthetic identifier detection and protection', () => {
 
     expect(() => protectDetectedSpans('가상고객-A님', overlapping)).toThrow('RUN_FAILED');
     expect(() => protectDetectedSpans('합성연락처-001', outOfBounds)).toThrow('RUN_FAILED');
+  });
+
+  it.each([
+    {
+      sourceText: '가상고객-A',
+      detection: {
+        type: 'contact',
+        action: 'placeholder',
+        rawValue: '가상고객-A',
+        start: 0,
+        end: 6,
+      } satisfies SyntheticDetection,
+    },
+    {
+      sourceText: '합성연락처-001',
+      detection: {
+        type: 'name',
+        action: 'surrogate',
+        rawValue: '합성연락처-001',
+        start: 0,
+        end: 9,
+      } satisfies SyntheticDetection,
+    },
+  ])('fails when caller-provided $detection.type detection bypasses its fixed grammar', ({sourceText, detection}) => {
+    expect(() => protectDetectedSpans(sourceText, [detection])).toThrow('RUN_FAILED');
   });
 
   it('fails rather than returning a protected string with synthetic raw-value residue', () => {
