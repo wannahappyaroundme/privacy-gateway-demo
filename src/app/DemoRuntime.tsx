@@ -216,7 +216,7 @@ export function DemoRuntime({
       } else if (event.key === 'Home') {
         actions.goTo(45);
       } else if (event.key === 'End') {
-        actions.goTo(855);
+        actions.goTo(790);
       } else {
         handled = false;
       }

@@ -29,8 +29,9 @@ export type RecordingSelection =
   | {kind: 'invalid'};
 
 export function recordingSelection(location: LocationQuery): RecordingSelection {
-  if (location.hash !== '') return location.search.includes('record=1') ? {kind: 'invalid'} : {kind: 'off'};
-  if (!location.search.includes('record=1')) return {kind: 'off'};
+  const parameters = new URLSearchParams(location.search);
+  if (!parameters.has('record')) return {kind: 'off'};
+  if (location.hash !== '') return {kind: 'invalid'};
 
   const matched = RECORDING_CASE_IDS.find(
     (caseId) => location.search === `?record=1&case=${caseId}`,

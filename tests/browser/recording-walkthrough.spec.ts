@@ -90,3 +90,11 @@ test('fails bootstrap closed for an unreviewed recording case query', async ({pa
   await expect(page.getByTestId('product-workspace')).toHaveCount(0);
   expect(await page.evaluate(() => window.__FPG_RECORDING_V1__)).toBeUndefined();
 });
+
+test('fails bootstrap closed for encoded recording intent', async ({page}) => {
+  await page.goto('./?record=%31&case=SYN-UNKNOWN-001');
+
+  await expect(page.getByRole('alert')).toContainText('검수된 시연 데이터를 확인하지 못했어요');
+  await expect(page.getByTestId('product-workspace')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__FPG_RECORDING_V1__)).toBeUndefined();
+});

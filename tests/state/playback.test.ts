@@ -16,7 +16,11 @@ import {
 } from '@/demo/playback';
 import {createRecordingBridge} from '@/app/recordingBridge';
 import {DemoRuntime, type DemoRuntimeView} from '@/app/DemoRuntime';
-import {isExactRecordingMode, type FpgRecordingV1} from '@/demo/recording';
+import {
+  isExactRecordingMode,
+  recordingSelection,
+  type FpgRecordingV1,
+} from '@/demo/recording';
 import {loadSyntheticCases} from '@/demo/schema';
 import {stateAt} from '@/demo/timeline';
 
@@ -188,6 +192,39 @@ describe('PlaybackController', () => {
 });
 
 describe('recording bridge contract', () => {
+  it('accepts only exact reviewed recording searches', () => {
+    expect(recordingSelection({
+      search: '?record=1&case=SYN-NORMAL-001',
+      hash: '',
+    })).toEqual({kind: 'valid', caseId: 'SYN-NORMAL-001'});
+    expect(recordingSelection({
+      search: '?record=1&case=SYN-BLOCK-001',
+      hash: '',
+    })).toEqual({kind: 'valid', caseId: 'SYN-BLOCK-001'});
+    expect(recordingSelection({
+      search: '?record=1&case=SYN-WITHHOLD-001',
+      hash: '',
+    })).toEqual({kind: 'valid', caseId: 'SYN-WITHHOLD-001'});
+  });
+
+  it.each([
+    '?record=%31&case=SYN-UNKNOWN-001',
+    '?%72ecord=1&case=SYN-NORMAL-001',
+    '?case=SYN-NORMAL-001&record=1',
+    '?record=1&case=SYN-NORMAL-001&extra=1',
+    '?record=1&record=1&case=SYN-NORMAL-001',
+    '?record=&case=SYN-NORMAL-001',
+    '?record=%&case=SYN-NORMAL-001',
+  ])('fails closed for non-exact recording intent %s', (search) => {
+    expect(recordingSelection({search, hash: ''})).toEqual({kind: 'invalid'});
+  });
+
+  it('treats a query without a lowercase record parameter as normal mode', () => {
+    expect(recordingSelection({search: '', hash: ''})).toEqual({kind: 'off'});
+    expect(recordingSelection({search: '?case=SYN-NORMAL-001', hash: ''})).toEqual({kind: 'off'});
+    expect(recordingSelection({search: '?RECORD=1', hash: ''})).toEqual({kind: 'off'});
+  });
+
   it('recognizes only the exact recording query with no hash', () => {
     expect(isExactRecordingMode({search: '?record=1&case=SYN-NORMAL-001', hash: ''})).toBe(true);
     expect(isExactRecordingMode({search: '?record=1&case=SYN-BLOCK-001', hash: ''})).toBe(true);
@@ -295,6 +332,24 @@ describe('recording bridge contract', () => {
 });
 
 describe('DemoRuntime layering', () => {
+  it('moves End from a non-interactive target to the final manual frame', async () => {
+    render(
+      createElement(DemoRuntime, {
+        bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
+        children: ({runtime}: DemoRuntimeView) =>
+          createElement(
+            'div',
+            {'data-testid': 'non-interactive'},
+            createElement('output', {'data-testid': 'frame'}, String(runtime.frame)),
+          ),
+      }),
+    );
+
+    fireEvent.keyDown(screen.getByTestId('non-interactive'), {key: 'End'});
+
+    await waitFor(() => expect(screen.getByTestId('frame')).toHaveTextContent('790'));
+  });
+
   it('removes the previous case snapshot and resets playback when selection changes', async () => {
     const blockedCase = cases.find(({caseId}) => caseId === 'SYN-BLOCK-001')!;
     const children = ({runtime, timeline, actions}: DemoRuntimeView) =>
