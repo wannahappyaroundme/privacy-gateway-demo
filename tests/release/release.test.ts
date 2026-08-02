@@ -27,6 +27,7 @@ type ReleasePolicy = {
     line: number;
   }>;
   hashSourceEntries: (entries: Array<{path: string; bytes: Buffer}>) => string;
+  isAllowedRepositoryPath: (path: string) => boolean;
   isAllowedSourcePath: (path: string) => boolean;
   scanText: (file: string, source: string) => Array<{
     file: string;
@@ -140,6 +141,15 @@ describe('public release policy', () => {
     expect(pkg.scripts['release:notices']).toBe('node scripts/make-third-party-notices.mjs');
   });
 
+  it('does not mutate pointer or hover state after the recording bridge settles a frame', () => {
+    for (const path of [
+      'scripts/capture-frames.mjs',
+      'tests/visual/demo-frames.spec.ts',
+    ]) {
+      expect(readFileSync(path, 'utf8'), path).not.toContain('.mouse.move(');
+    }
+  });
+
   it('disables the unused module-preload fetch polyfill and source maps', () => {
     const vite = readFileSync('vite.config.ts', 'utf8');
     expect(vite).toContain('modulePreload: {polyfill: false}');
@@ -229,11 +239,14 @@ describe('public release policy', () => {
     const policy = await loadReleasePolicy();
 
     expect(policy.isAllowedSourcePath('src/app/App.tsx')).toBe(true);
-    expect(
-      policy.isAllowedSourcePath('artifacts/regression/07-type-protection-detail.png'),
-    ).toBe(true);
-    expect(policy.isAllowedSourcePath('artifacts/regression/08-explicit-block.png')).toBe(true);
-    expect(policy.isAllowedSourcePath('artifacts/regression/09-unreviewed.png')).toBe(false);
+    expect(policy.isAllowedSourcePath('src/prototype/run.ts')).toBe(true);
+    expect(policy.isAllowedSourcePath('tests/components/state-surfaces.test.tsx')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/06-request-blocked.png')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/07-response-withheld.png')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/07-type-protection-detail.png')).toBe(false);
+    expect(policy.isAllowedSourcePath('artifacts/regression/08-explicit-block.png')).toBe(false);
+    expect(policy.isAllowedRepositoryPath('artifacts/submission/07-response-withheld.png')).toBe(true);
+    expect(policy.isAllowedRepositoryPath('artifacts/submission/08-unreviewed.png')).toBe(false);
     expect(policy.isAllowedSourcePath('.superpowers/sdd/report.md')).toBe(false);
     expect(policy.isAllowedSourcePath('AGENTS.md')).toBe(false);
 
@@ -300,9 +313,9 @@ describe('public release policy', () => {
   it('documents the local-only deployment boundary and Darwin visual baseline limit', () => {
     const readme = readOrEmpty('README.md');
 
-    expect(readme).toContain('GitHub Pages 배포는 자동으로 실행되지 않습니다');
+    expect(readme).toContain('GitHub Pages 배포는 자동으로 시작되지 않습니다');
     expect(readme).toContain('macOS에서 생성한 검토 기준 이미지');
-    expect(readme).toContain('제품 성능이나 운영 보안 검증 결과를 뜻하지 않습니다');
-    expect(readme).toContain('GitHub가 접속 IP 등 사용 정보를 처리할 수 있습니다');
+    expect(readme).toContain('실제 제품 성능이나 운영 보안을 검증한 결과도 아닙니다');
+    expect(readme).toContain('GitHub가 접속 IP 등 방문 정보를 처리할 수');
   });
 });

@@ -2,26 +2,25 @@
 
 ## Privacy Demo Sans
 
-The two local WOFF2 files are Modified Versions of the Korean region-specific subset of Noto Sans CJK KR 2.004. They are distributed under the SIL Open Font License 1.1 in `FONT-LICENSE.txt`. The modified CSS family name is `Privacy Demo Sans`; the upstream family name is not used as the primary family name.
+The two local WOFF2 files are modified, renamed, static subsets of the official Google Fonts Noto Sans KR variable TTF. Weight instances `400` and `700` are built separately. The source TTF is a read-only input and is not committed. The generated primary family is `Privacy Demo Sans`, which does not use the OFL Reserved Font Name `Source`. Copyright and OFL metadata are preserved in each output. See `FONT-LICENSE.txt` for the complete OFL 1.1 text and provenance header.
 
-- Upstream release: `Noto Sans CJK 2.004`, tag `Sans2.004`
-- Upstream tag commit: `523d033d6cb47f4a80c58a35753646f5c3608a78`
-- Upstream release asset: `17_NotoSansKR.zip`
-- Source URL: `https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/17_NotoSansKR.zip`
-- Source download date: `2026-07-18`
-- Asset SHA-256: `ac7eeb4e2b0d41de8ff31b2d6e1e2a41caf253fd5cefb380bfa1f40f1747b612`
-- Source Regular OTF SHA-256: `69975a0ac8472717870aefeab0a4d52739308d90856b9955313b2ad5e0148d68`
-- Source Bold OTF SHA-256: `5a6ceb287ed2fc6cfc6213144ebea68cbd94b20fc9eb873d8486493bf02d9bda`
-- License SHA-256: `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`
-- Conversion date: `2026-07-21`
+- Source family: `Noto Sans KR`
+- Copyright: `Copyright 2014-2021 Adobe (http://www.adobe.com/)`
+- Reserved Font Name: `Source`
+- Source URL: `https://github.com/google/fonts/tree/main/ofl/notosanskr`
+- Source recorded date: `2026-08-03`
+- Source variable TTF SHA-256: `194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252`
+- OFL text SHA-256: `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9`
+- Conversion date: `2026-08-03`
 - Conversion tool: `fonttools 4.60.2`
 - WOFF2 encoder dependency: `Brotli 1.1.0`, installed only in the temporary conversion environment
-- Rendered glyph source: every string value in `src/content/copy.ts` and `src/demo/fixtures/synthetic-consultation-v1.json`, deduplicated as UTF-8 code points
+- Rendered glyph source: every string value in `src/content/copy.ts` and `src/demo/fixtures/synthetic-cases-v2.json`, deduplicated as UTF-8 code points
+- Glyph set: `303` unique UTF-8 code points, SHA-256 `e17ee65150c13c3c7d7fdf5be648849e578aa0eb1138aa3aeba2859653d33b03`
 
 Repository-owned conversion helpers:
 
 - `scripts/fonts/make-privacy-demo-glyphs.py`: `4950cd86d0db3d1729e64cff207a18eac47db8a2d3b490e8ba22c69beb5ca454`
-- `scripts/fonts/rename-privacy-demo-font.py`: `bc44f1ddac3bebc0e6dde531613efaf58e4f88ba264f36857eb8af778ac1089d`
+- `scripts/fonts/rename-privacy-demo-font.py`: `82a0b6b948a474495f609ee11aeaa337c49411348c10a895150744c712cf7e26`
 
 The helper files are durable equivalents of the temporary conversion helpers used for this build. They remove the original machine-specific repository path while preserving the glyph collection, family-name rewriting, and deterministic table ordering.
 
@@ -32,32 +31,32 @@ python3 -m venv /tmp/privacy-demo-font-build/venv
 /tmp/privacy-demo-font-build/venv/bin/python -m pip install fonttools==4.60.2 Brotli==1.1.0
 ```
 
-Place the two verified source OTF files at the exact input paths shown below, verify their SHA-256 values against this notice, then run the exact glyph-list command:
+Place the verified source TTF at `/tmp/NotoSansKR-wght.ttf`, verify its SHA-256 against this notice, then run the exact glyph-list command:
 
 ```text
-python3 scripts/fonts/make-privacy-demo-glyphs.py src/content/copy.ts src/demo/fixtures/synthetic-consultation-v1.json /tmp/privacy-demo-font-build/privacy-demo-glyphs.txt
+python3 scripts/fonts/make-privacy-demo-glyphs.py src/content/copy.ts src/demo/fixtures/synthetic-cases-v2.json /tmp/privacy-demo-font-build/privacy-demo-glyphs.txt
 ```
 
-Exact Regular preparation and subset commands:
+Exact Regular instancing, renaming, and subset commands:
 
 ```text
-/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/privacy-demo-font-build/NotoSansKR-Regular.otf /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.otf "Privacy Demo Sans" Regular
-/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.otf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Regular.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.ttf "Privacy Demo Sans" Regular 400
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.ttf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Regular.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
 ```
 
-Exact Bold preparation and subset commands:
+Exact Bold instancing, renaming, and subset commands:
 
 ```text
-/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/privacy-demo-font-build/NotoSansKR-Bold.otf /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.otf "Privacy Demo Sans" Bold
-/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.otf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Bold.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.ttf "Privacy Demo Sans" Bold 700
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.ttf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Bold.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
 ```
 
 Output SHA-256:
 
-- `PrivacyDemoSans-Regular.woff2`: `d39b657c437553d8d784e6e81ab1be1a4dfa372735c9137fc8702c7c7771ea33`
-- `PrivacyDemoSans-Bold.woff2`: `4aaaae155142d793fcfb581cc56f773d573f9dd9a5c91265c920031bb6a13d41`
+- `PrivacyDemoSans-Regular.woff2`: `f68511ea090456f02eb9bd0418d18ccb3fa6316cf74ee44d274a4c8fac442759`
+- `PrivacyDemoSans-Bold.woff2`: `b5bf22f6eead642ac7e7388804cb782c23eacb94af4ae178c36a00221f832456`
 
-The source zip, source OTF files, temporary renamed OTF files, and temporary glyph list are not committed.
+Repeat both preparation and subset commands into a second temporary output directory, then compare SHA-256 values. Two independent generations must match the hashes above byte-for-byte before replacing the repository WOFF2 files. The 9.9 MB source TTF, temporary static TTF files, and temporary glyph list are not committed.
 
 <!-- BEGIN GENERATED NPM DEPENDENCIES -->
 

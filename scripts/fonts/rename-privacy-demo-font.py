@@ -2,10 +2,12 @@ import sys
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
 
 
-source_path, output_path, family, subfamily = sys.argv[1:5]
+source_path, output_path, family, subfamily, weight = sys.argv[1:6]
 font = TTFont(source_path, recalcTimestamp=False)
+font = instantiateVariableFont(font, {'wght': float(weight)}, inplace=True, optimize=True)
 name_table = font['name']
 compact_family = family.replace(' ', '')
 full_name = f'{family} {subfamily}'

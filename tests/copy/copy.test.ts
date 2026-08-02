@@ -215,6 +215,12 @@ function fontNames(fontPath: string): string[] {
   return names;
 }
 
+function fontWeight(fontPath: string): number {
+  const table = readWoff2Tables(fontPath).get('OS/2');
+  if (!table) throw new Error('WOFF2 OS/2 table is missing');
+  return table.readUInt16BE(4);
+}
+
 describe('rendered copy contract', () => {
   it('uses product-workspace copy without the retired validation-plan story', () => {
     const rendered = collectStrings(COPY).join('\n');
@@ -295,10 +301,17 @@ describe('rendered copy contract', () => {
       .replace('<!-- BEGIN GENERATED NPM DEPENDENCIES -->', '')
       .replace('<!-- END GENERATED NPM DEPENDENCIES -->', '');
 
-    expect(notices).toContain('- Source download date: `2026-07-18`');
+    expect(notices).toContain('- Source family: `Noto Sans KR`');
     expect(notices).toContain(
-      '- Source URL: `https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/17_NotoSansKR.zip`',
+      '- Source URL: `https://github.com/google/fonts/tree/main/ofl/notosanskr`',
     );
+    expect(notices).toContain(
+      '- Source variable TTF SHA-256: `194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252`',
+    );
+    expect(notices).toContain(
+      '- OFL text SHA-256: `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9`',
+    );
+    expect(notices).toContain('src/demo/fixtures/synthetic-cases-v2.json');
     expect(noticesWithoutGeneratedMarkers).not.toMatch(/<[^>\n]+>/u);
     expect(notices).not.toMatch(/\/private\/tmp\/[^\s`]+\.py/u);
 
@@ -310,10 +323,9 @@ describe('rendered copy contract', () => {
       expect(notices).toContain(`\`${relativePath}\`: \`${helperHash}\``);
     }
 
-    for (const weight of ['Regular', 'Bold']) {
-      expect(notices).toContain(`/tmp/privacy-demo-font-build/NotoSansKR-${weight}.otf`);
-      expect(notices).toContain(`public/fonts/PrivacyDemoSans-${weight}.woff2`);
-    }
+    expect(notices).toContain('/tmp/NotoSansKR-wght.ttf');
+    expect(notices).toContain('public/fonts/PrivacyDemoSans-Regular.woff2');
+    expect(notices).toContain('public/fonts/PrivacyDemoSans-Bold.woff2');
   });
 
   it('contains no forbidden rendered claim, brand, or em dash', () => {
@@ -330,14 +342,9 @@ describe('rendered copy contract', () => {
     expect(rendered).not.toMatch(/\b\d{2,4}-\d{2,6}-\d{2,6}\b/u);
   });
 
-  it('keeps every rendered glyph outside the Task 7 font expansion in both licensed subsets', () => {
-    const [defaultCase] = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
-    // These two groups only centralize strings that Task 6 already rendered inline.
-    // This no-font-change fix keeps the established Task 7 subset contract unchanged.
-    const fontBaselineCopy = {...COPY, functionalPrototype: {}, live: {}};
-    const rendered = collectStrings(fontBaselineCopy)
-      .concat(collectStrings({label: defaultCase.label, sourceText: defaultCase.sourceText}))
-      .join('');
+  it('contains every glyph rendered by COPY and all reviewed v2 cases in both licensed subsets', () => {
+    const cases = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
+    const rendered = collectStrings(COPY).concat(collectStrings(cases)).join('');
     const required = new Set(
       Array.from(rendered, (character) => character.codePointAt(0)!).filter(
         (codePoint) => !/\s/u.test(String.fromCodePoint(codePoint)),
@@ -347,17 +354,23 @@ describe('rendered copy contract', () => {
     for (const fontPath of [regularFontPath, boldFontPath]) {
       const available = fontCodePoints(fontPath);
       const missing = [...required].filter((codePoint) => !available.has(codePoint));
-      const task7FontExpansion = new Set(Array.from('브타컬버른췄', (character) => character.codePointAt(0)!));
-      const unexpected = missing.filter((codePoint) => !task7FontExpansion.has(codePoint));
-      expect(unexpected.map((codePoint) => `U+${codePoint.toString(16).toUpperCase()}`)).toEqual([]);
+      expect(missing.map((codePoint) => `U+${codePoint.toString(16).toUpperCase()}`)).toEqual([]);
     }
   });
 
-  it('uses the modified family name in both font subsets', () => {
-    for (const fontPath of [regularFontPath, boldFontPath]) {
+  it('uses static 400 and 700 OFL subsets under the unreserved modified family name', () => {
+    for (const [fontPath, weight] of [
+      [regularFontPath, 400],
+      [boldFontPath, 700],
+    ] as const) {
+      const tables = readWoff2Tables(fontPath);
       const names = fontNames(fontPath);
       expect(names).toContain('Privacy Demo Sans');
       expect(names).not.toContain('Noto Sans KR');
+      expect(names.some((name) => name.includes('2014-2021 Adobe'))).toBe(true);
+      expect(names.some((name) => name.includes('SIL Open Font License'))).toBe(true);
+      expect(fontWeight(fontPath)).toBe(weight);
+      expect([...tables.keys()]).not.toEqual(expect.arrayContaining(['fvar', 'gvar', 'avar']));
     }
   });
 

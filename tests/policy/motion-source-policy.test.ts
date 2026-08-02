@@ -4,7 +4,10 @@ import {join, resolve} from 'node:path';
 import {ESLint} from 'eslint';
 import {describe, expect, it} from 'vitest';
 
-import {findMotionPolicyViolations} from './motion-source-policy';
+import {
+  findMotionPolicyViolations,
+  findPrototypeSourcePolicyViolations,
+} from './motion-source-policy';
 
 const ALLOWED_WRAPPER = `
   import {motion} from 'motion/react';
@@ -193,6 +196,87 @@ describe('Motion source policy analyzer', () => {
     );
 
     expect(violations).toEqual([]);
+  });
+});
+
+describe('functional prototype source policy', () => {
+  it.each([
+    ['fetch', `export const run = () => fetch('/api');`],
+    ['XMLHttpRequest', 'export const run = () => new XMLHttpRequest();'],
+    ['WebSocket', `export const run = () => new WebSocket('wss://example.invalid');`],
+    ['EventSource', `export const run = () => new EventSource('/events');`],
+    ['sendBeacon', `export const run = () => navigator.sendBeacon('/audit');`],
+    ['localStorage write', `export const run = () => localStorage.setItem('key', 'value');`],
+    ['sessionStorage write', `export const run = () => sessionStorage.clear();`],
+    ['IndexedDB write', `export const run = () => indexedDB.open('demo');`],
+    ['Cache API write', `export const run = () => caches.open('demo');`],
+    ['service worker registration', `export const run = () => navigator.serviceWorker.register('/sw.js');`],
+    ['wall-clock shortcut', 'export const run = () => Date.now();'],
+    ['random shortcut', 'export const run = () => Math.random();'],
+  ])('rejects %s in prototype engine source', (_name, source) => {
+    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).not.toEqual([]);
+  });
+
+  it.each(['expectedOutcome', 'verifiedResult', 'mockResponse'])(
+    'rejects the %s expected-output shortcut in a reviewed fixture',
+    (field) => {
+      const source = JSON.stringify({cases: [{[field]: 'shortcut'}]});
+      expect(
+        findPrototypeSourcePolicyViolations(
+          source,
+          'src/demo/fixtures/synthetic-cases-v2.json',
+        ),
+      ).toEqual([
+        expect.objectContaining({rule: `fixture-forbidden-field:${field}`}),
+      ]);
+    },
+  );
+
+  it.each([
+    ['external provider', ['Open', 'AI'].join('')],
+    ['consumer chat product', ['Chat', 'GPT'].join('')],
+    ['bank abbreviation', ['K', 'B'].join('')],
+    ['financial group abbreviation', ['i', 'M'].join('')],
+  ])('rejects %s branding in prototype and fixture sources', (_name, brand) => {
+    expect(
+      findPrototypeSourcePolicyViolations(
+        `export const provider = '${brand}';`,
+        'src/prototype/run.ts',
+      ),
+    ).not.toEqual([]);
+    expect(
+      findPrototypeSourcePolicyViolations(
+        JSON.stringify({cases: [{label: brand}]}),
+        'src/demo/fixtures/synthetic-cases-v2.json',
+      ),
+    ).not.toEqual([]);
+  });
+
+  it.each([
+    ['phone', ['010', '1234', '5678'].join('-')],
+    ['resident number', ['900101', '1234567'].join('-')],
+    ['card number', ['1234', '5678', '9012', '3456'].join('-')],
+    ['account number', ['123', '45', '6789012'].join('-')],
+  ])('rejects an actual-looking %s in prototype and fixture sources', (_name, identifier) => {
+    for (const file of [
+      'src/prototype/run.ts',
+      'src/demo/fixtures/synthetic-cases-v2.json',
+    ]) {
+      expect(findPrototypeSourcePolicyViolations(identifier, file)).not.toEqual([]);
+    }
+  });
+
+  it('keeps every prototype engine and the reviewed v2 fixture inside the static boundary', () => {
+    const prototypeViolations = collectSourceFiles(resolve('src/prototype')).flatMap((path) =>
+      findPrototypeSourcePolicyViolations(readFileSync(path, 'utf8'), path),
+    );
+    const fixturePath = resolve('src/demo/fixtures/synthetic-cases-v2.json');
+    const fixtureViolations = findPrototypeSourcePolicyViolations(
+      readFileSync(fixturePath, 'utf8'),
+      fixturePath,
+    );
+
+    expect([...prototypeViolations, ...fixtureViolations]).toEqual([]);
   });
 });
 

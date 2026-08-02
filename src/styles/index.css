@@ -848,8 +848,21 @@ button:focus-visible, a:focus-visible, select:focus-visible, summary:focus-visib
   line-height: 1.45;
   text-align: right;
 }
-.case-selector { display: grid; gap: 6px; margin-top: 14px; color: var(--navy); font-size: var(--font-helper); font-weight: 700; }
+.case-selector { position: relative; display: grid; gap: 6px; margin-top: 14px; color: var(--navy); font-size: var(--font-helper); font-weight: 700; }
+.case-selector::after {
+  content: "";
+  position: absolute;
+  right: 17px;
+  bottom: 19px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--navy);
+  border-bottom: 2px solid var(--navy);
+  pointer-events: none;
+  transform: rotate(45deg);
+}
 .case-selector select {
+  appearance: none;
   width: 100%;
   min-height: 44px;
   padding: 8px 38px 8px 12px;
@@ -904,6 +917,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, summary:focus-visib
 .locked-result .result-skeleton { margin-top: 8px; }
 .result-state-card__icon { color: #9f2740; background: var(--danger-soft); font-size: 24px; }
 .result-state-card h3 { max-width: 360px; margin: 5px 0 0; color: var(--navy); font-size: 22px; line-height: 1.4; }
+.result-state-card--request h3 { max-width: 480px; }
 .result-state-card__actions { display: grid; gap: 8px; width: min(100%, 340px); }
 .result-state-card__actions button { width: 100%; }
 .result-actions button { min-height: 44px; font-size: var(--font-helper); }

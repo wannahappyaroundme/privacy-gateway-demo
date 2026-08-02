@@ -47,17 +47,17 @@ const SOURCE_PATHS = [
   /^\.github\/workflows\/(?:ci|pages)\.yml$/u,
   /^public\/favicon\.svg$/u,
   /^public\/fonts\/PrivacyDemoSans-(?:Regular|Bold)\.woff2$/u,
-  /^artifacts\/regression\/(?:07-type-protection-detail|08-explicit-block)\.png$/u,
+  /^artifacts\/regression\/(?:06-request-blocked|07-response-withheld)\.png$/u,
   /^scripts\/[a-z0-9-]+\.mjs$/u,
   /^scripts\/fonts\/[a-z0-9-]+\.py$/u,
   /^src\/.+\.(?:css|json|ts|tsx)$/u,
-  /^tests\/.+\.(?:png|ts)$/u,
+  /^tests\/.+\.(?:png|ts|tsx)$/u,
 ];
 
 const ARTIFACT_PATHS = [
   /^artifacts\/recording-check\.md$/u,
-  /^artifacts\/regression\/(?:07-type-protection-detail|08-explicit-block)\.png$/u,
-  /^artifacts\/submission\/0[1-6]-[a-z0-9-]+\.png$/u,
+  /^artifacts\/regression\/(?:06-request-blocked|07-response-withheld)\.png$/u,
+  /^artifacts\/submission\/0[1-7]-[a-z0-9-]+\.png$/u,
 ];
 
 const SECRET_AND_PATH_RULES = [

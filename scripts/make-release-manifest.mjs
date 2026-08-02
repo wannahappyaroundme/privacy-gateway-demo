@@ -7,7 +7,7 @@ import {hashBytes, hashSourceEntries} from './release-policy.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MANIFEST_PATH = path.join(ROOT, 'release-manifest.json');
-const FIXTURE_PATH = path.join(ROOT, 'src/demo/fixtures/synthetic-consultation-v1.json');
+const FIXTURE_PATH = path.join(ROOT, 'src/demo/fixtures/synthetic-cases-v2.json');
 const COPY_PATH = path.join(ROOT, 'src/content/copy.ts');
 
 const prior = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));

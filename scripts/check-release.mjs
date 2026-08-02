@@ -143,7 +143,7 @@ async function main() {
   }
 
   const fixture = await readFile(
-    path.join(ROOT, 'src/demo/fixtures/synthetic-consultation-v1.json'),
+    path.join(ROOT, 'src/demo/fixtures/synthetic-cases-v2.json'),
   );
   const copy = await readFile(path.join(ROOT, 'src/content/copy.ts'));
   const manifest = JSON.parse(
