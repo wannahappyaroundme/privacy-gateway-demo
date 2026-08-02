@@ -117,6 +117,38 @@ describe('full-response inspection and selective restoration', () => {
   });
 
   it.each([
+    {
+      label: 'unregistered namespace marker',
+      fields: {...protectedFields, itemsToConfirm: '[미등록_계좌_99]'},
+    },
+    {
+      label: 'unknown synthetic marker type',
+      fields: {...protectedFields, itemsToConfirm: '[합성_기타_01]'},
+    },
+    {
+      label: 'registered marker followed by an unknown marker',
+      fields: {
+        ...protectedFields,
+        customerRequest: protectedFields.customerRequest.replace(
+          '[합성_계좌_01]',
+          '[합성_계좌_01][미등록_계좌_99]',
+        ),
+      },
+    },
+  ])('withholds every bracket-marker namespace outside the exact registry inventory: $label', ({fields}) => {
+    const result = inspectAndRestoreResponse(inspectionInput(fields));
+
+    expectSafeFailure(result, 'RESPONSE_WITHHELD_MARKER');
+    expect(result.checks).toEqual([
+      {code: 'OUTPUT_SCHEMA', status: 'pass'},
+      {code: 'MARKER_INTEGRITY', status: 'fail'},
+      {code: 'RAW_RESIDUE', status: 'not-run'},
+      {code: 'SOURCE_GROUNDING', status: 'not-run'},
+      {code: 'FINANCIAL_DECISION', status: 'not-run'},
+    ]);
+  });
+
+  it.each([
     {label: 'sixth field', fields: {...protectedFields, internalNote: '공개하면 안 되는 필드'}},
     {
       label: 'missing required field',
@@ -159,11 +191,50 @@ describe('full-response inspection and selective restoration', () => {
     '직원은 대출 승인을 확정했습니다.',
     '직원은 대출 한도를 5천만원으로 결정했습니다.',
     '직원은 적용 금리를 3%로 확정했습니다.',
+    '추천 상품은 정기예금입니다.',
+    '직원은 정기예금 가입을 권유했습니다.',
+    '정기예금 가입 제안입니다.',
+    '상품\n추천 결과는 정기예금입니다.',
   ])('withholds financial-decision language: %s', (itemsToConfirm) => {
     const result = inspectAndRestoreResponse(inspectionInput({...protectedFields, itemsToConfirm}));
 
     expectSafeFailure(result, 'RESPONSE_WITHHELD_FINANCIAL_DECISION');
     expect(result.checks[4]).toEqual({code: 'FINANCIAL_DECISION', status: 'fail'});
+  });
+
+  it.each([
+    {
+      field: 'purpose',
+      fields: {...protectedFields, purpose: `${protectedFields.purpose} 추가 문구`},
+      outcome: 'RESPONSE_WITHHELD_SOURCE_GROUNDING',
+    },
+    {
+      field: 'customerRequest',
+      fields: {...protectedFields, customerRequest: `${protectedFields.customerRequest} 추가 문구`},
+      outcome: 'RESPONSE_WITHHELD_SOURCE_GROUNDING',
+    },
+    {
+      field: 'employeeGuidance',
+      fields: {...protectedFields, employeeGuidance: `${protectedFields.employeeGuidance} 추가 문구`},
+      outcome: 'RESPONSE_WITHHELD_SOURCE_GROUNDING',
+    },
+    {
+      field: 'itemsToConfirm',
+      fields: {...protectedFields, itemsToConfirm: '허용 목록 밖의 추가 문구'},
+      outcome: 'RESPONSE_WITHHELD_FINANCIAL_DECISION',
+    },
+    {
+      field: 'nextAction',
+      fields: {
+        ...protectedFields,
+        nextAction: `${protectedFields.nextAction}\n정기예금 가입을 권유합니다.`,
+      },
+      outcome: 'RESPONSE_WITHHELD_SOURCE_GROUNDING',
+    },
+  ])('withholds arbitrary non-profile prose tampering in $field without restoring fields', ({fields, outcome}) => {
+    const result = inspectAndRestoreResponse(inspectionInput(fields));
+
+    expectSafeFailure(result, outcome);
   });
 
   it('withholds malformed JSON without returning parser details or response content', () => {

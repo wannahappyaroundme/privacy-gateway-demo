@@ -58,10 +58,9 @@ const ProtectedSummarySchema = z
 type ProtectedSummary = z.infer<typeof ProtectedSummarySchema>;
 
 const RAW_SYNTHETIC_GRAMMAR = /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-[0-9]{3}/u;
-const PROTECTED_TOKEN_CANDIDATE = /\[[^\]\r\n]*합성[^\]\r\n]*\]|가상고객[A-Za-z0-9_-]+/gu;
+const PROTECTED_TOKEN_CANDIDATE = /\[[^\]\r\n]+\]|가상고객[A-Za-z0-9_-]+/gu;
+const SUMMARY_SENTENCE = /^(?<customerRequest>.+? 요청했습니다\.) (?<employeeGuidance>직원은 .+? 설명했습니다\.)$/u;
 const NEXT_ACTION = '상담 내용을 확인해 후속 안내를 준비합니다.';
-const FINANCIAL_DECISION =
-  /상품.{0,20}추천|승인|한도.{0,20}(?:결정|확정|승인|설정)|(?:결정|확정|승인|설정).{0,20}한도|금리.{0,20}(?:결정|확정|승인|적용)|(?:결정|확정|승인|적용).{0,20}금리/u;
 
 const OUTCOME_BY_CHECK: Readonly<Record<CheckCode, InspectionOutcome>> = {
   OUTPUT_SCHEMA: 'RESPONSE_WITHHELD_SCHEMA',
@@ -107,10 +106,22 @@ function markerInventoryIsExact(fields: ProtectedSummary, registry: ReadonlyMap<
 }
 
 function sourceGroundingIsApproved(fields: ProtectedSummary, sourceText: string, protectedText: string): boolean {
-  const purposeGrounded = fields.purpose.length === 0 || protectedText.includes(fields.purpose);
-  const requestGrounded = fields.customerRequest.length === 0 || protectedText.includes(fields.customerRequest);
-  const guidanceGrounded = fields.employeeGuidance.length === 0 || sourceText.includes(fields.employeeGuidance);
-  return purposeGrounded && requestGrounded && guidanceGrounded && fields.nextAction === NEXT_ACTION;
+  const sourceMatch = SUMMARY_SENTENCE.exec(protectedText);
+  const customerRequest = sourceMatch?.groups?.customerRequest;
+  const employeeGuidance = sourceMatch?.groups?.employeeGuidance;
+  const purpose = customerRequest?.match(/\] (?<purpose>.+) 요청했습니다\.$/u)?.groups?.purpose;
+
+  return (
+    fields.purpose === purpose &&
+    fields.customerRequest === customerRequest &&
+    fields.employeeGuidance === employeeGuidance &&
+    sourceText.includes(fields.employeeGuidance) &&
+    fields.nextAction === NEXT_ACTION
+  );
+}
+
+function fixedProfileOutputIsApproved(fields: ProtectedSummary): boolean {
+  return fields.itemsToConfirm === '';
 }
 
 function validateResponse(input: InspectionInput): ValidInspection {
@@ -139,7 +150,7 @@ function validateResponse(input: InspectionInput): ValidInspection {
   }
   checks[3] = {code: 'SOURCE_GROUNDING', status: 'pass'};
 
-  if (FINANCIAL_DECISION.test(summaryText(fields))) {
+  if (!fixedProfileOutputIsApproved(fields)) {
     return failAt(checks, 4);
   }
   checks[4] = {code: 'FINANCIAL_DECISION', status: 'pass'};
