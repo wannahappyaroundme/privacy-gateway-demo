@@ -132,3 +132,38 @@ test('exposes visible focus and minimum readable helper and body text tokens', a
   expect(sizes.helper).toBeGreaterThanOrEqual(12);
   expect(sizes.body).toBeGreaterThanOrEqual(14);
 });
+
+test('renders protected request and verified result values at body text size', async ({page}) => {
+  const bridge = await recordingBridge(page);
+
+  await bridge.setFrame(180);
+  const protectedTextSize = await page.locator('.protected-text').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(protectedTextSize).toBeGreaterThanOrEqual(14);
+
+  await bridge.setFrame(790);
+  const verifiedValueSize = await page
+    .locator('[data-testid="verified-result"] dl > div > dd:not(.result-evidence)')
+    .first()
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(verifiedValueSize).toBeGreaterThanOrEqual(14);
+});
+
+test('keeps the invalid bootstrap alert accessible and bounded on a narrow screen', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('./?record=1&case=SYN-UNKNOWN-001');
+
+  const alert = page.getByRole('alert');
+  await expect(alert.getByRole('heading', {name: '검수된 시연 데이터를 확인하지 못했어요'})).toBeVisible();
+  await expect(alert.getByRole('button', {name: '처음부터 다시 시작'})).toBeVisible();
+  expect(criticalOrSerious(await new AxeBuilder({page}).analyze())).toEqual([]);
+
+  const widths = await page.evaluate(() => ({
+    body: document.body.scrollWidth,
+    document: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }));
+  expect(widths.body).toBeLessThanOrEqual(widths.viewport);
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+});

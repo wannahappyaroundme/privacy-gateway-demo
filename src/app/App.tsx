@@ -13,13 +13,18 @@ import {
   type DemoRuntimeView,
 } from './DemoRuntime';
 
-function BootstrapMessage({bootstrap}: {bootstrap: BootstrapState}) {
+export function BootstrapMessage({bootstrap}: {bootstrap: BootstrapState}) {
   if (bootstrap.kind === 'loading') {
-    return <section className="bootstrap-card" role="status"><span className="loading-ring" />{COPY.bootstrap.loading}</section>;
+    return (
+      <section className="bootstrap-card" role="status">
+        <span className="loading-ring" aria-hidden="true" />
+        <h1>{COPY.bootstrap.loading}</h1>
+      </section>
+    );
   }
   if (bootstrap.kind === 'empty') {
     return (
-      <section className="bootstrap-card">
+      <section className="bootstrap-card" role="status">
         <h1>{COPY.bootstrap.emptyTitle}</h1>
         <p>{COPY.bootstrap.emptyDescription}</p>
         <button type="button" onClick={() => window.location.reload()}>{COPY.bootstrap.emptyAction}</button>
@@ -52,17 +57,17 @@ function LiveRegion({view}: {view: DemoRuntimeView}) {
     if (before === null || view.timeline === null) return;
 
     if (current.phase === 'playing' && before.phase === 'idle') {
-      setMessage('단디가 상담 메모의 개인정보 보호 처리를 시작했습니다.');
+      setMessage(COPY.live.started);
     } else if (current.outcome === 'VERIFIED' && before.outcome !== 'VERIFIED') {
-      setMessage('전체 검사가 끝났습니다. 확인된 결과를 표시합니다.');
+      setMessage(COPY.live.verified);
     } else if (
       current.phase === 'complete' &&
       current.outcome !== 'VERIFIED' &&
       before.phase !== 'complete'
     ) {
-      setMessage('확인이 필요한 결과는 표시하지 않았습니다.');
+      setMessage(COPY.live.withheld);
     } else if (current.phase === 'paused' && before.phase !== 'paused') {
-      setMessage('처리가 일시정지되었습니다. 계속 진행 버튼으로 이어갈 수 있습니다.');
+      setMessage(COPY.live.paused);
     }
   }, [view.runtime.phase, view.timeline]);
 

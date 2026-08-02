@@ -28,7 +28,13 @@ export function BlockedResultPanel({kind, onNormal, onAnother, onRetry}: Blocked
       role="status"
     >
       <div className="result-state-card__icon" aria-hidden="true">{isRecoverable ? '↻' : '!'}</div>
-      <p className="panel__eyebrow">{isRecoverable ? '다시 실행할 수 있어요' : isRequest ? COPY.blocked.requestEyebrow : COPY.blocked.responseEyebrow}</p>
+      <p className="panel__eyebrow">
+        {isRecoverable
+          ? COPY.functionalPrototype.recoverableEyebrow
+          : isRequest
+            ? COPY.blocked.requestEyebrow
+            : COPY.blocked.responseEyebrow}
+      </p>
       <h3>{title}</h3>
       <p>{description}</p>
       <div className="result-state-card__actions">

@@ -41,7 +41,7 @@ const copyModule = await import(
   `data:text/javascript;base64,${Buffer.from(transpiled).toString('base64')}`
 );
 const fixture = JSON.parse(
-  await readFile(path.join(ROOT, 'src/demo/fixtures/synthetic-consultation-v1.json'), 'utf8'),
+  await readFile(path.join(ROOT, 'src/demo/fixtures/synthetic-cases-v2.json'), 'utf8'),
 );
 const rendered = collectStrings(copyModule.COPY).concat(collectStrings(fixture)).join('\n');
 const findings = scanText('rendered-copy', rendered);

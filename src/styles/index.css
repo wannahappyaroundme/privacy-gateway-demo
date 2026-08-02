@@ -881,8 +881,9 @@ button:focus-visible, a:focus-visible, select:focus-visible, summary:focus-visib
 .compact-heading strong { color: var(--navy); font-size: var(--font-body); }
 .compact-heading > span { color: #526981; font-size: var(--font-helper); font-weight: 700; }
 .protected-comparison, .inspection-compact, .evidence-compact { padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
-.protected-text, .protected-comparison__message { margin: 7px 0 0; color: #435b75; font-size: var(--font-helper); line-height: 1.45; }
-.protected-text { padding: 6px 8px; border-radius: 7px; background: var(--cobalt-soft); }
+.protected-text, .protected-comparison__message { margin: 7px 0 0; color: #435b75; line-height: 1.45; }
+.protected-text { padding: 6px 8px; border-radius: 7px; background: var(--cobalt-soft); font-size: var(--font-body); }
+.protected-comparison__message { font-size: var(--font-helper); }
 .inspection-compact__list { display: grid; gap: 3px; margin: 7px 0 0; padding: 0; list-style: none; }
 .inspection-compact__list li { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; min-height: 26px; color: #526981; font-size: var(--font-helper); }
 .inspection-compact__list li > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; color: #60758f; background: var(--surface-muted); font-weight: 700; }
@@ -907,7 +908,8 @@ button:focus-visible, a:focus-visible, select:focus-visible, summary:focus-visib
 .result-state-card__actions button { width: 100%; }
 .result-actions button { min-height: 44px; font-size: var(--font-helper); }
 .product-result__success strong, .product-result__success p { font-size: var(--font-helper); }
-.product-result dt, .product-result dd, .product-result .result-evidence { font-size: var(--font-helper); }
+.product-result dt, .product-result .result-evidence { font-size: var(--font-helper); }
+.product-result dd:not(.result-evidence) { font-size: var(--font-body); }
 
 .scope-notice summary { display: flex; align-items: center; min-height: 44px; }
 

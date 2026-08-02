@@ -19,9 +19,12 @@ export function VerifiedResultPanel({fields, onRetry, onAnother}: VerifiedResult
         <span aria-hidden="true">✓</span>
         <div><strong>{COPY.workspace.complete}</strong><p>{COPY.workspace.completeDescription}</p></div>
       </div>
-      <dl aria-label="확인된 상담 요약 5개 항목">
+      <dl aria-label={COPY.functionalPrototype.result.ariaLabel}>
         {fields.map((field) => (
-          <div key={field.label} className={field.label === '직원이 확인할 항목' ? 'needs-review' : undefined}>
+          <div
+            key={field.label}
+            className={field.label === COPY.functionalPrototype.result.needsReviewLabel ? 'needs-review' : undefined}
+          >
             <dt>{field.label}</dt>
             <dd>{field.value || '-'}</dd>
             <dd className="result-evidence">{field.evidence}</dd>

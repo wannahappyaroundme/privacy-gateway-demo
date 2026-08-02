@@ -11,8 +11,8 @@ export function EvidenceStatusTable() {
   return (
     <section className="evidence-compact" data-testid="evidence-status" aria-labelledby="evidence-title">
       <div className="compact-heading">
-        <strong id="evidence-title">내용 없는 실행 근거</strong>
-        <span>현재 화면</span>
+        <strong id="evidence-title">{COPY.functionalPrototype.evidence.title}</strong>
+        <span>{COPY.functionalPrototype.evidence.currentSurface}</span>
       </div>
       <dl>
         {rows.map(([label, value]) => (

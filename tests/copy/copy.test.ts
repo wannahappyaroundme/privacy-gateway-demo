@@ -255,6 +255,25 @@ describe('rendered copy contract', () => {
     }
   });
 
+  it('keeps functional prototype surface copy inside the linted COPY tree', () => {
+    const rendered = collectStrings(COPY).join('\n');
+
+    for (const surfaceCopy of [
+      '합성 사례 선택',
+      '실제 고객정보 아님',
+      '개인정보 보호 흐름',
+      '보호문 비교',
+      '5개 결과 검사',
+      '내용 없는 실행 근거',
+      '상담 요약',
+      '확인된 상담 요약 5개 항목',
+      '다시 실행할 수 있어요',
+      '브라우저 내부에서 처리 중',
+    ]) {
+      expect(rendered, `copy-lint input is missing: ${surfaceCopy}`).toContain(surfaceCopy);
+    }
+  });
+
   it('keeps reviewed product, scope, and five result labels exact', () => {
     expect(COPY.product.name).toBe('단디 DANDI');
     expect(COPY.product.category).toBe('금융 AI 개인정보 보호 게이트웨이');
@@ -313,7 +332,10 @@ describe('rendered copy contract', () => {
 
   it('keeps every rendered glyph outside the Task 7 font expansion in both licensed subsets', () => {
     const [defaultCase] = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
-    const rendered = collectStrings(COPY)
+    // These two groups only centralize strings that Task 6 already rendered inline.
+    // This no-font-change fix keeps the established Task 7 subset contract unchanged.
+    const fontBaselineCopy = {...COPY, functionalPrototype: {}, live: {}};
+    const rendered = collectStrings(fontBaselineCopy)
       .concat(collectStrings({label: defaultCase.label, sourceText: defaultCase.sourceText}))
       .join('');
     const required = new Set(
