@@ -77,6 +77,14 @@ const IDENTIFIER_RULES = [
   {name: 'account-number', pattern: /\b\d{2,6}[ -]\d{2,6}[ -]\d{5,8}\b/gu},
 ];
 
+const BROWSER_BASE_PATH = '/privacy-gateway-demo/';
+const FIXED_BROWSER_RESOURCES = new Map([
+  [BROWSER_BASE_PATH, 'document'],
+  [`${BROWSER_BASE_PATH}favicon.svg`, 'image'],
+  [`${BROWSER_BASE_PATH}fonts/PrivacyDemoSans-Regular.woff2`, 'font'],
+  [`${BROWSER_BASE_PATH}fonts/PrivacyDemoSans-Bold.woff2`, 'font'],
+]);
+
 function lineAt(source, offset) {
   return source.slice(0, offset).split('\n').length;
 }
@@ -98,6 +106,36 @@ export function hashSourceEntries(entries) {
     digest.update('\0');
   }
   return digest.digest('hex');
+}
+
+function browserResourceContract(indexHtml) {
+  const resources = new Map(FIXED_BROWSER_RESOURCES);
+  const attributePattern = /\b(?:href|src)="(\/privacy-gateway-demo\/assets\/[^"]+)"/gu;
+  for (const match of indexHtml.matchAll(attributePattern)) {
+    const path = match[1];
+    if (/\.js$/u.test(path)) resources.set(path, 'script');
+    if (/\.css$/u.test(path)) resources.set(path, 'stylesheet');
+  }
+  return resources;
+}
+
+export function browserRequestFinding(indexHtml, request, expectedOrigin) {
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return `unexpected-resource:${request.method}:${request.resourceType}:${request.url}`;
+  }
+  const contract = browserResourceContract(indexHtml);
+  const expectedType = contract.get(`${url.pathname}${url.search}`);
+  if (
+    request.method === 'GET' &&
+    url.origin === expectedOrigin &&
+    expectedType === request.resourceType
+  ) {
+    return null;
+  }
+  return `unexpected-resource:${request.method}:${request.resourceType}:${request.url}`;
 }
 
 export function isAllowedSourcePath(path) {

@@ -201,6 +201,101 @@ describe('Motion source policy analyzer', () => {
 
 describe('functional prototype source policy', () => {
   it.each([
+    [
+      'relative imported request helper',
+      `import {request} from '../helper'; request('/api');`,
+      'prototype-import:relative-or-out-of-bound',
+    ],
+    [
+      'callable function parameter',
+      `(request: (path: string) => unknown) => request('/api');`,
+      'prototype-call:parameter',
+    ],
+    [
+      'absolute dynamic import',
+      `import('/privacy-gateway-demo/extra.js');`,
+      'prototype-import:dynamic',
+    ],
+    [
+      'Function constructor call result',
+      `Function('return fetch')()('/api');`,
+      'prototype-call:dynamic-callee',
+    ],
+    [
+      'direct eval',
+      `eval("fetch('/api')");`,
+      'prototype-code-generation:eval',
+    ],
+    [
+      'new Function constructor',
+      `new Function("return fetch('/api')");`,
+      'prototype-code-generation:Function',
+    ],
+    [
+      'side-effect import',
+      `import '@/prototype/inspect';`,
+      'prototype-import:side-effect',
+    ],
+    [
+      'out-of-bound application import',
+      `import {run} from '@/app/run'; run();`,
+      'prototype-import:relative-or-out-of-bound',
+    ],
+    [
+      'unreviewed external import',
+      `import axios from 'axios'; axios.get('/api');`,
+      'prototype-import:external',
+    ],
+    [
+      'unresolved callable alias',
+      `const request = unknownRequest; request('/api');`,
+      'prototype-call:unresolved-alias',
+    ],
+    [
+      'method call through a structural function parameter',
+      `(request: {get(path: string): unknown}) => request.get('/api');`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'pure-method-name call through a structural function parameter',
+      `(request: {map(callback: () => unknown): unknown}) => request.map(() => undefined);`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'method call through an unresolved receiver',
+      `unknownClient.get('/api');`,
+      'prototype-call:unresolved-receiver',
+    ],
+    [
+      'pure-method-name call on an unreviewed local factory result',
+      `function client() { return {get: (path: string) => path}; } client().get('/api');`,
+      'prototype-call:unreviewed-receiver',
+    ],
+  ])('rejects %s through the closed dependency and call graph', (_name, source, rule) => {
+    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule})]),
+    );
+  });
+
+  it('allows reviewed prototype imports, zod calls, local functions, and pure methods', () => {
+    const source = `
+      import {z} from 'zod';
+      import {inspectResponse} from '@/prototype/inspect';
+      const schema = z.object({value: z.string()}).strict();
+      function normalize(values: readonly string[]) {
+        return values.map((value) => value.trim()).join('');
+      }
+      export const run = (input: {chunks: readonly string[]}) => {
+        normalize(input.chunks);
+        schema.parse({value: 'ok'});
+        return inspectResponse(input as never);
+      };
+    `;
+
+    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual([]);
+  });
+
+  it.each([
     ['fetch', `export const run = () => fetch('/api');`],
     ['XMLHttpRequest', 'export const run = () => new XMLHttpRequest();'],
     ['WebSocket', `export const run = () => new WebSocket('wss://example.invalid');`],

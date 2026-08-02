@@ -1,4 +1,20 @@
 import {expect, test} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+
+type BrowserPolicy = {
+  browserRequestFinding: (
+    indexHtml: string,
+    request: {method: string; url: string; resourceType: string},
+    expectedOrigin: string,
+  ) => string | null;
+};
+
+async function loadBrowserPolicy(): Promise<BrowserPolicy> {
+  const url = pathToFileURL(resolve('scripts/release-policy.mjs')).href;
+  return (await import(url)) as BrowserPolicy;
+}
 
 type NetworkPolicyState = {
   apiCalls: string[];
@@ -125,21 +141,18 @@ test.beforeEach(async ({page}) => {
 });
 
 test('keeps every reviewed outcome free of egress, persistence, console content, and raw evidence', async ({page}) => {
+  const policy = await loadBrowserPolicy();
+  const builtIndex = readFileSync(resolve('dist/index.html'), 'utf8');
   let unexpectedRequests: string[] = [];
   let consoleMessages: Array<Promise<string>> = [];
   let pageErrors: string[] = [];
   page.on('request', (request) => {
-    const url = new URL(request.url());
-    const allowedPath = /\/(?:|privacy-gateway-demo\/|privacy-gateway-demo\/[^?#]+\.(?:js|css|woff2|html|svg))$/u;
-    const allowedType = new Set(['document', 'script', 'stylesheet', 'font', 'image']);
-    if (
-      request.method() !== 'GET' ||
-      url.origin !== 'http://127.0.0.1:4173' ||
-      !allowedPath.test(url.pathname) ||
-      !allowedType.has(request.resourceType())
-    ) {
-      unexpectedRequests.push(`${request.method()}:${request.resourceType()}:${request.url()}`);
-    }
+    const finding = policy.browserRequestFinding(
+      builtIndex,
+      {method: request.method(), url: request.url(), resourceType: request.resourceType()},
+      'http://127.0.0.1:4173',
+    );
+    if (finding !== null) unexpectedRequests.push(finding);
   });
   page.on('console', (message) => {
     consoleMessages.push((async () => {
@@ -204,4 +217,29 @@ test('keeps every reviewed outcome free of egress, persistence, console content,
       /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
     );
   }
+});
+
+test('flags an unreviewed same-origin dynamic JavaScript request', async ({page}) => {
+  const policy = await loadBrowserPolicy();
+  const builtIndex = readFileSync(resolve('dist/index.html'), 'utf8');
+  const findings: string[] = [];
+  page.on('request', (request) => {
+    const finding = policy.browserRequestFinding(
+      builtIndex,
+      {method: request.method(), url: request.url(), resourceType: request.resourceType()},
+      'http://127.0.0.1:4173',
+    );
+    if (finding !== null) findings.push(finding);
+  });
+
+  await page.goto('./');
+  findings.length = 0;
+  await page.evaluate(async () => {
+    const unreviewedModule = '/privacy-gateway-demo/extra.js';
+    await import(unreviewedModule).catch(() => undefined);
+  });
+
+  expect(findings).toEqual([
+    'unexpected-resource:GET:script:http://127.0.0.1:4173/privacy-gateway-demo/extra.js',
+  ]);
 });

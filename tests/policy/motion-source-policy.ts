@@ -69,6 +69,105 @@ const PROTOTYPE_FORBIDDEN_IDENTIFIERS = new Set([
   'sendBeacon',
   'sessionStorage',
 ]);
+const PROTOTYPE_CODE_GENERATION_IDENTIFIERS = new Set([
+  'AsyncFunction',
+  'AsyncGeneratorFunction',
+  'Function',
+  'GeneratorFunction',
+  'WebAssembly',
+  'eval',
+  'setInterval',
+  'setTimeout',
+]);
+const APPROVED_PROTOTYPE_IMPORTS = new Map<string, ReadonlySet<string>>([
+  ['@/prototype/contracts', new Set(['MockBehavior', 'SyntheticCase'])],
+  [
+    '@/prototype/inspect',
+    new Set([
+      'CHECK_ORDER',
+      'InspectionCheck',
+      'InspectionOutcome',
+      'VerifiedFields',
+      'inspectAndRestoreResponse',
+      'inspectResponse',
+    ]),
+  ],
+  ['@/prototype/mockModel', new Set(['generateMockResponse'])],
+  [
+    '@/prototype/protect',
+    new Set(['detectSyntheticIdentifiers', 'protectDetectedSpans']),
+  ],
+]);
+const APPROVED_DIRECT_CALLS = new Set(['String']);
+const APPROVED_CONSTRUCTORS = new Set(['Error', 'Map', 'RegExp', 'Set']);
+const APPROVED_PURE_METHODS = new Set([
+  'add',
+  'charCodeAt',
+  'clear',
+  'every',
+  'exec',
+  'find',
+  'flatMap',
+  'get',
+  'has',
+  'imul',
+  'includes',
+  'indexOf',
+  'join',
+  'keys',
+  'map',
+  'match',
+  'matchAll',
+  'object',
+  'padStart',
+  'parse',
+  'push',
+  'replace',
+  'set',
+  'slice',
+  'some',
+  'sort',
+  'split',
+  'strict',
+  'string',
+  'stringify',
+  'test',
+  'trim',
+  'values',
+]);
+const APPROVED_STRING_METHODS = new Set([
+  'charCodeAt',
+  'includes',
+  'indexOf',
+  'match',
+  'matchAll',
+  'padStart',
+  'replace',
+  'slice',
+  'split',
+  'trim',
+]);
+const APPROVED_ARRAY_METHODS = new Set([
+  'every',
+  'find',
+  'flatMap',
+  'indexOf',
+  'join',
+  'map',
+  'push',
+  'slice',
+  'some',
+  'sort',
+]);
+const APPROVED_MAP_METHODS = new Set(['clear', 'get', 'has', 'keys', 'set']);
+const APPROVED_SET_METHODS = new Set(['add', 'has']);
+const APPROVED_REGEXP_METHODS = new Set(['exec', 'test']);
+const APPROVED_ZOD_METHODS = new Set(['object', 'parse', 'strict', 'string']);
+const APPROVED_BUILTIN_METHODS = new Map<string, ReadonlySet<string>>([
+  ['JSON', new Set(['parse', 'stringify'])],
+  ['Math', new Set(['imul'])],
+  ['Object', new Set(['values'])],
+]);
 
 function staticRuleViolations(
   source: string,
@@ -127,7 +226,7 @@ function staticStringValue(node: ts.Expression): string | null {
   return null;
 }
 
-function rootIdentifier(node: ts.Expression): string | null {
+function rootIdentifierNode(node: ts.Expression): ts.Identifier | null {
   let current = node;
   while (
     ts.isParenthesizedExpression(current) ||
@@ -136,7 +235,11 @@ function rootIdentifier(node: ts.Expression): string | null {
   ) {
     current = current.expression;
   }
-  return ts.isIdentifier(current) ? current.text : null;
+  return ts.isIdentifier(current) ? current : null;
+}
+
+function rootIdentifier(node: ts.Expression): string | null {
+  return rootIdentifierNode(node)?.text ?? null;
 }
 
 function isArrayLiteralJoin(node: ts.Node): node is ts.CallExpression {
@@ -165,6 +268,21 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
     fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const violations: MotionPolicyViolation[] = [];
+  const compilerOptions: ts.CompilerOptions = {
+    noResolve: true,
+    target: ts.ScriptTarget.Latest,
+  };
+  const defaultCompilerHost = ts.createCompilerHost(compilerOptions);
+  const compilerHost: ts.CompilerHost = {
+    ...defaultCompilerHost,
+    fileExists: (path) => path === fileName || defaultCompilerHost.fileExists(path),
+    getSourceFile: (path, languageVersion) =>
+      path === fileName
+        ? sourceFile
+        : defaultCompilerHost.getSourceFile(path, languageVersion),
+    readFile: (path) => path === fileName ? source : defaultCompilerHost.readFile(path),
+  };
+  const checker = ts.createProgram([fileName], compilerOptions, compilerHost).getTypeChecker();
   const report = (node: ts.Node, rule: string): void => {
     const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
     violations.push({
@@ -180,7 +298,227 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       return pattern.test(value);
     });
 
+  const importModuleForDeclaration = (declaration: ts.Declaration): string | null => {
+    let current: ts.Node = declaration;
+    while (!ts.isSourceFile(current)) {
+      if (ts.isImportDeclaration(current)) {
+        return ts.isStringLiteral(current.moduleSpecifier) ? current.moduleSpecifier.text : null;
+      }
+      current = current.parent;
+    }
+    return null;
+  };
+
+  const validateImport = (node: ts.ImportDeclaration): void => {
+    const module = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : null;
+    if (node.importClause === undefined) {
+      report(node, 'prototype-import:side-effect');
+      return;
+    }
+    if (module === null || module.startsWith('.') || module.startsWith('/') || module.startsWith('@/') && !module.startsWith('@/prototype/')) {
+      report(node, 'prototype-import:relative-or-out-of-bound');
+      return;
+    }
+    const approvedBindings = module === 'zod'
+      ? new Set(['z'])
+      : APPROVED_PROTOTYPE_IMPORTS.get(module);
+    if (approvedBindings === undefined) {
+      report(
+        node,
+        module.startsWith('@/prototype/')
+          ? 'prototype-import:unreviewed-prototype-module'
+          : 'prototype-import:external',
+      );
+      return;
+    }
+    const bindings = node.importClause.namedBindings;
+    if (
+      node.importClause.name !== undefined ||
+      bindings === undefined ||
+      !ts.isNamedImports(bindings)
+    ) {
+      report(node, 'prototype-import:unsupported-binding');
+      return;
+    }
+    for (const element of bindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      if (!approvedBindings.has(importedName)) {
+        report(element, 'prototype-import:unreviewed-binding');
+      }
+    }
+  };
+
+  const validateDirectCall = (node: ts.CallExpression, callee: ts.Identifier): void => {
+    if (PROTOTYPE_CODE_GENERATION_IDENTIFIERS.has(callee.text)) {
+      report(node, `prototype-code-generation:${callee.text}`);
+      return;
+    }
+    if (APPROVED_DIRECT_CALLS.has(callee.text)) return;
+
+    const symbol = checker.getSymbolAtLocation(callee);
+    const declaration = symbol?.declarations?.[0];
+    if (declaration === undefined) {
+      report(node, 'prototype-call:unresolved');
+      return;
+    }
+    if (ts.isParameter(declaration)) {
+      report(node, 'prototype-call:parameter');
+      return;
+    }
+    if (ts.isFunctionDeclaration(declaration)) return;
+    if (ts.isImportSpecifier(declaration)) {
+      const module = importModuleForDeclaration(declaration);
+      if (module !== null && APPROVED_PROTOTYPE_IMPORTS.has(module)) return;
+      report(node, 'prototype-call:external-or-unreviewed-import');
+      return;
+    }
+    if (ts.isVariableDeclaration(declaration)) {
+      if (
+        declaration.initializer !== undefined &&
+        (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))
+      ) {
+        return;
+      }
+      report(node, 'prototype-call:unresolved-alias');
+      return;
+    }
+    report(node, 'prototype-call:unreviewed-callee');
+  };
+
+  const typeAllowsMethod = (node: ts.Expression, method: string): boolean => {
+    const allows = (type: ts.Type): boolean => {
+      if (type.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined | ts.TypeFlags.Void)) {
+        return true;
+      }
+      if (type.isUnion()) return type.types.every(allows);
+      if (type.flags & ts.TypeFlags.StringLike) return APPROVED_STRING_METHODS.has(method);
+      if (checker.isArrayType(type) || checker.isTupleType(type)) {
+        return APPROVED_ARRAY_METHODS.has(method);
+      }
+      const typeName = type.aliasSymbol?.getName() ?? type.getSymbol()?.getName() ?? '';
+      if (typeName === 'RegExpMatchArray') return APPROVED_ARRAY_METHODS.has(method);
+      if (typeName === 'Map' || typeName === 'ReadonlyMap') {
+        return APPROVED_MAP_METHODS.has(method);
+      }
+      if (typeName === 'Set' || typeName === 'ReadonlySet') {
+        return APPROVED_SET_METHODS.has(method);
+      }
+      if (typeName === 'RegExp') return APPROVED_REGEXP_METHODS.has(method);
+      return false;
+    };
+    const type = checker.getTypeAtLocation(node);
+    if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return false;
+    return allows(type);
+  };
+
+  const isZodExpression = (node: ts.Expression): boolean => {
+    let current = node;
+    while (ts.isParenthesizedExpression(current)) current = current.expression;
+    if (ts.isCallExpression(current)) return isZodExpression(current.expression);
+    if (ts.isPropertyAccessExpression(current)) return isZodExpression(current.expression);
+    if (!ts.isIdentifier(current)) return false;
+    const symbol = checker.getSymbolAtLocation(current);
+    const declaration = symbol?.declarations?.[0];
+    if (declaration !== undefined && ts.isImportSpecifier(declaration)) {
+      return importModuleForDeclaration(declaration) === 'zod';
+    }
+    if (
+      declaration !== undefined &&
+      ts.isVariableDeclaration(declaration) &&
+      declaration.initializer !== undefined
+    ) {
+      return isZodExpression(declaration.initializer);
+    }
+    return false;
+  };
+
+  const validatePropertyCall = (
+    node: ts.CallExpression,
+    callee: ts.PropertyAccessExpression,
+  ): void => {
+    const method = callee.name.text;
+    if (!APPROVED_PURE_METHODS.has(method)) {
+      report(node, `prototype-call:unreviewed-method:${method}`);
+      return;
+    }
+    const receiver = callee.expression;
+    const root = rootIdentifier(receiver);
+    if (root !== null) {
+      const builtinMethods = APPROVED_BUILTIN_METHODS.get(root);
+      if (builtinMethods?.has(method)) return;
+    }
+    const rootNode = rootIdentifierNode(receiver);
+    const rootSymbol = rootNode === null ? undefined : checker.getSymbolAtLocation(rootNode);
+    const rootDeclaration = rootSymbol?.declarations?.[0];
+    if (
+      rootDeclaration !== undefined &&
+      ts.isImportSpecifier(rootDeclaration) &&
+      importModuleForDeclaration(rootDeclaration) === '@/prototype/inspect' &&
+      (rootDeclaration.propertyName?.text ?? rootDeclaration.name.text) === 'CHECK_ORDER' &&
+      APPROVED_ARRAY_METHODS.has(method)
+    ) {
+      return;
+    }
+    if (isZodExpression(receiver) && APPROVED_ZOD_METHODS.has(method)) {
+      return;
+    }
+    if (typeAllowsMethod(receiver, method)) return;
+    if (root === null) {
+      report(node, 'prototype-call:unreviewed-receiver');
+      return;
+    }
+    const declaration = rootDeclaration;
+    if (declaration === undefined) {
+      report(node, 'prototype-call:unresolved-receiver');
+    } else if (ts.isParameter(declaration)) {
+      report(node, 'prototype-call:parameter-receiver');
+    } else if (ts.isImportSpecifier(declaration)) {
+      report(node, 'prototype-call:external-or-unreviewed-import-receiver');
+    } else {
+      report(node, 'prototype-call:unreviewed-receiver');
+    }
+  };
+
+  const validateCall = (node: ts.CallExpression): void => {
+    const callee = node.expression;
+    if (callee.kind === ts.SyntaxKind.ImportKeyword) {
+      report(node, 'prototype-import:dynamic');
+      return;
+    }
+    if (ts.isIdentifier(callee)) {
+      validateDirectCall(node, callee);
+      return;
+    }
+    if (ts.isPropertyAccessExpression(callee)) {
+      validatePropertyCall(node, callee);
+      return;
+    }
+    if (ts.isElementAccessExpression(callee)) {
+      report(node, 'prototype-call:computed-callee');
+      return;
+    }
+    report(node, 'prototype-call:dynamic-callee');
+  };
+
+  const validateConstructor = (node: ts.NewExpression): void => {
+    const constructor = node.expression;
+    if (ts.isIdentifier(constructor) && PROTOTYPE_CODE_GENERATION_IDENTIFIERS.has(constructor.text)) {
+      report(node, `prototype-code-generation:${constructor.text}`);
+      return;
+    }
+    if (!ts.isIdentifier(constructor) || !APPROVED_CONSTRUCTORS.has(constructor.text)) {
+      report(node, 'prototype-constructor:unreviewed');
+    }
+  };
+
   const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node)) validateImport(node);
+    if (ts.isImportEqualsDeclaration(node)) report(node, 'prototype-import:import-equals');
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) {
+      report(node, 'prototype-import:re-export');
+    }
+    if (ts.isCallExpression(node)) validateCall(node);
+    if (ts.isNewExpression(node)) validateConstructor(node);
     if (ts.isElementAccessExpression(node)) {
       const root = rootIdentifier(node.expression);
       if (root !== null && PROTOTYPE_COMPUTED_ROOTS.has(root)) {
@@ -192,6 +530,9 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
     }
     if (ts.isIdentifier(node) && PROTOTYPE_FORBIDDEN_IDENTIFIERS.has(node.text)) {
       report(node, `prototype-forbidden-identifier:${node.text}`);
+    }
+    if (ts.isIdentifier(node) && PROTOTYPE_CODE_GENERATION_IDENTIFIERS.has(node.text)) {
+      report(node, `prototype-code-generation:${node.text}`);
     }
     if (
       ts.isIdentifier(node) &&

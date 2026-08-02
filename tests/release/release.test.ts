@@ -26,6 +26,11 @@ type ReleasePolicy = {
     rule: string;
     line: number;
   }>;
+  browserRequestFinding: (
+    indexHtml: string,
+    request: {method: string; url: string; resourceType: string},
+    expectedOrigin: string,
+  ) => string | null;
   hashSourceEntries: (entries: Array<{path: string; bytes: Buffer}>) => string;
   isAllowedRepositoryPath: (path: string) => boolean;
   isAllowedSourcePath: (path: string) => boolean;
@@ -56,6 +61,36 @@ function readOrEmpty(path: string): string {
 }
 
 describe('public release policy', () => {
+  it('allows only the exact built document, assets, fonts, and favicon', async () => {
+    const policy = await loadReleasePolicy();
+    const html = `
+      <link rel="icon" href="/privacy-gateway-demo/favicon.svg" />
+      <script src="/privacy-gateway-demo/assets/index-reviewed.js"></script>
+      <link rel="stylesheet" href="/privacy-gateway-demo/assets/index-reviewed.css" />
+    `;
+    const request = (url: string, resourceType: string, method = 'GET') =>
+      policy.browserRequestFinding(
+        html,
+        {method, url, resourceType},
+        'http://127.0.0.1:4173',
+      );
+
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/', 'document')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js', 'script')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.css', 'stylesheet')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/fonts/PrivacyDemoSans-Regular.woff2', 'font')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/fonts/PrivacyDemoSans-Bold.woff2', 'font')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/favicon.svg', 'image')).toBeNull();
+
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/extra.js', 'script')).toBe(
+      'unexpected-resource:GET:script:http://127.0.0.1:4173/privacy-gateway-demo/extra.js',
+    );
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js?next=1', 'script')).toMatch(/^unexpected-resource:/u);
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js', 'image')).toMatch(/^unexpected-resource:/u);
+    expect(request('https://example.invalid/privacy-gateway-demo/assets/index-reviewed.js', 'script')).toMatch(/^unexpected-resource:/u);
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/', 'document', 'POST')).toMatch(/^unexpected-resource:/u);
+  });
+
   it('selects the actual license filename independently of filesystem case rules', async () => {
     const notices = await loadNoticeModule();
     expect(notices.selectLicenseFile(['package.json', 'license', 'readme.md'])).toBe('license');
