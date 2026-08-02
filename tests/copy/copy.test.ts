@@ -6,10 +6,10 @@ import {brotliDecompressSync} from 'node:zlib';
 import {describe, expect, it} from 'vitest';
 
 import {COPY, FORBIDDEN_RENDERED_COPY} from '@/content/copy';
-import {validateFixture} from '@/demo/schema';
+import {loadSyntheticCases} from '@/demo/schema';
 
 const copyPath = resolve('src/content/copy.ts');
-const fixturePath = resolve('src/demo/fixtures/synthetic-consultation-v1.json');
+const casesPath = resolve('src/demo/fixtures/synthetic-cases-v2.json');
 const manifestPath = resolve('release-manifest.json');
 const noticesPath = resolve('THIRD_PARTY_NOTICES.md');
 const regularFontPath = resolve('public/fonts/PrivacyDemoSans-Regular.woff2');
@@ -238,13 +238,17 @@ describe('rendered copy contract', () => {
     }
   });
 
-  it('keeps reviewed product, scope, and five result fields exact', async () => {
-    const fixture = await validateFixture(readFileSync(fixturePath, 'utf8'));
-
+  it('keeps reviewed product, scope, and five result labels exact', () => {
     expect(COPY.product.name).toBe('단디 DANDI');
     expect(COPY.product.category).toBe('금융 AI 개인정보 보호 게이트웨이');
     expect(COPY.product.memoryLine).toBe('허용된 업무만, 확인된 결과만');
-    expect(COPY.verifiedResult).toEqual(fixture.verifiedResult);
+    expect(COPY.verifiedResult.map(({label}) => label)).toEqual([
+      '상담 목적',
+      '고객 요청',
+      '직원이 안내한 내용',
+      '직원이 확인할 항목',
+      '다음 조치',
+    ]);
     expect(COPY.scope.official).toBe('제품 콘셉트 데모 | 합성 예시 데이터');
     expect(COPY.scope.detail).toContain('실제 고객정보와 금융 시스템에는 연결되지 않습니다');
   });
@@ -291,8 +295,10 @@ describe('rendered copy contract', () => {
   });
 
   it('keeps every rendered glyph in both licensed font subsets', () => {
-    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as unknown;
-    const rendered = collectStrings(COPY).concat(collectStrings(fixture)).join('');
+    const [defaultCase] = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
+    const rendered = collectStrings(COPY)
+      .concat(collectStrings({label: defaultCase.label, sourceText: defaultCase.sourceText}))
+      .join('');
     const required = new Set(
       Array.from(rendered, (character) => character.codePointAt(0)!).filter(
         (codePoint) => !/\s/u.test(String.fromCodePoint(codePoint)),

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-import {afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createElement} from 'react';
 import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 
@@ -17,25 +17,22 @@ import {
 import {createRecordingBridge} from '@/app/recordingBridge';
 import {DemoRuntime, type DemoRuntimeView} from '@/app/DemoRuntime';
 import {isExactRecordingMode, type FpgRecordingV1} from '@/demo/recording';
-import {validateFixture, type ValidatedFixture} from '@/demo/schema';
+import {loadSyntheticCases} from '@/demo/schema';
 import {stateAt} from '@/demo/timeline';
 
-let fixture: ValidatedFixture;
+const cases = loadSyntheticCases(
+  readFileSync(resolve('src/demo/fixtures/synthetic-cases-v2.json'), 'utf8'),
+);
+const normalCase = cases.find(({caseId}) => caseId === 'SYN-NORMAL-001')!;
 
 afterEach(() => cleanup());
 
-beforeAll(async () => {
-  fixture = await validateFixture(
-    readFileSync(resolve('src/demo/fixtures/synthetic-consultation-v1.json'), 'utf8'),
-  );
-});
-
 describe('logical playback contract', () => {
-  it('maps the product flow to a 22-second 900-frame recording story', () => {
-    expect(AUTO_DURATION_MS).toBe(22_000);
+  it('maps the product flow to an 8-second 900-frame runtime', () => {
+    expect(AUTO_DURATION_MS).toBe(8_000);
     expect(frameAt(0)).toBe(0);
-    expect(frameAt(21_999)).toBe(899);
-    expect(frameAt(22_000)).toBe(899);
+    expect(frameAt(7_999)).toBe(899);
+    expect(frameAt(8_000)).toBe(899);
     expect(frameAt(Number.POSITIVE_INFINITY)).toBe(899);
     expect(() => frameAt(-1)).toThrow(RangeError);
   });
@@ -52,12 +49,12 @@ describe('logical playback contract', () => {
   });
 
   it('navigates only between reviewed manual stops', () => {
-    expect(nextStop(855)).toBe(945);
-    expect(nextStop(945)).toBe(945);
-    expect(previousStop(945)).toBe(855);
+    expect(nextStop(610)).toBe(790);
+    expect(nextStop(790)).toBe(790);
+    expect(previousStop(790)).toBe(610);
     expect(previousStop(45)).toBe(45);
     expect(playableFrameAfter(899, 1_000)).toBe(899);
-    expect(playableFrameAfter(750, 1_000)).toBe(790);
+    expect(playableFrameAfter(750, 1_000)).toBe(862);
   });
 });
 
@@ -70,11 +67,11 @@ describe('PlaybackController', () => {
     controller.start(10_000);
     expect(controller.getState()).toMatchObject({phase: 'playing', frame: 0, countdownLabel: null});
     controller.advance(11_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 40, elapsedMs: 1_000});
-    controller.advance(31_999);
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 112, elapsedMs: 1_000});
+    controller.advance(17_999);
     expect(controller.getState()).toMatchObject({phase: 'playing', frame: 899});
-    controller.advance(32_000);
-    expect(controller.getState()).toMatchObject({phase: 'complete', frame: 899, elapsedMs: 22_000});
+    controller.advance(18_000);
+    expect(controller.getState()).toMatchObject({phase: 'complete', frame: 899, elapsedMs: 8_000});
     expect(onChange).toHaveBeenCalled();
   });
 
@@ -84,28 +81,27 @@ describe('PlaybackController', () => {
 
     expect(controller.advance(13_250)).toMatchObject({
       phase: 'playing',
-      frame: 132,
+      frame: 365,
       elapsedMs: 3_250,
     });
-    expect(controller.advance(14_250)).toMatchObject({phase: 'playing', frame: 173});
+    expect(controller.advance(14_250)).toMatchObject({phase: 'playing', frame: 478});
   });
 
   it('replays immediately and never auto resumes after visibility loss', () => {
     const controller = new PlaybackController();
     controller.start(0);
-    controller.advance(3_000);
-    controller.advance(8_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 327});
+    controller.advance(4_000);
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 450});
 
     controller.handleVisibilityHidden();
     const paused = controller.getState();
-    expect(paused).toMatchObject({phase: 'paused', frame: 327});
+    expect(paused).toMatchObject({phase: 'paused', frame: 450});
     controller.advance(20_000);
     expect(controller.getState()).toEqual(paused);
 
     controller.resume(20_000);
     controller.advance(21_000);
-    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 368});
+    expect(controller.getState()).toMatchObject({phase: 'playing', frame: 562});
 
     controller.replay(30_000);
     expect(controller.getState()).toMatchObject({phase: 'playing', frame: 0, countdownLabel: null});
@@ -120,34 +116,32 @@ describe('PlaybackController', () => {
     controller.resume(500);
     expect(controller.getState()).toMatchObject({phase: 'manual', frame: 45});
     controller.next();
-    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 150});
-    controller.goTo(945);
-    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 945});
+    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 180});
+    controller.goTo(790);
+    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 790});
     controller.previous();
-    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 855});
+    expect(controller.getState()).toMatchObject({phase: 'manual', frame: 610});
   });
 
   it('moves real-user interruption to the nearest reviewed stop and can resume manual playback', () => {
     const controller = new PlaybackController();
     controller.start(0);
-    controller.advance(3_000);
-    controller.advance(11_200);
+    controller.advance(3_200);
 
     expect(controller.enterManual()).toMatchObject({phase: 'manual', frame: 360});
     expect(controller.resume(20_000)).toMatchObject({phase: 'playing', frame: 360});
-    expect(controller.advance(21_000)).toMatchObject({phase: 'playing', frame: 400});
+    expect(controller.advance(20_500)).toMatchObject({phase: 'playing', frame: 416});
 
-    controller.goTo(945);
-    expect(controller.resume(22_000)).toMatchObject({phase: 'manual', frame: 945});
+    controller.goTo(899);
+    expect(controller.resume(22_000)).toMatchObject({phase: 'playing', frame: 899});
   });
 
   it('keeps a runtime manual after its environment tightens the motion policy', () => {
     const controller = new PlaybackController();
     controller.start(0);
     controller.advance(3_000);
-    controller.advance(8_000);
 
-    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 327});
+    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 337});
     expect(controller.replay(20_000)).toMatchObject({phase: 'manual', frame: 45});
   });
 
@@ -157,22 +151,56 @@ describe('PlaybackController', () => {
     controller.advance(3_000);
     const playing = controller.advance(3_080);
 
-    expect(playing).toMatchObject({phase: 'playing', frame: 126, elapsedMs: 3_080});
-    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 126, elapsedMs: 3_080});
-    expect(controller.advance(10_000)).toMatchObject({phase: 'manual', frame: 126, elapsedMs: 3_080});
+    expect(playing).toMatchObject({phase: 'playing', frame: 346, elapsedMs: 3_080});
+    expect(controller.requireManualOnly()).toMatchObject({phase: 'manual', frame: 346, elapsedMs: 3_080});
+    expect(controller.advance(10_000)).toMatchObject({phase: 'manual', frame: 346, elapsedMs: 3_080});
+  });
+
+  it('finishes at an exact terminal frame and ignores later advancement', () => {
+    const controller = new PlaybackController();
+    controller.start(1_000);
+
+    expect(controller.finish(180)).toMatchObject({phase: 'complete', frame: 180});
+    const complete = controller.getState();
+    expect(controller.advance(9_000)).toBe(complete);
+    expect(controller.dispatch({type: 'FINISH', frame: 240})).toBe(complete);
+  });
+
+  it('keeps terminal frames in manual and reduced-motion runtimes until replay resets', () => {
+    const manual = new PlaybackController({manualOnly: true});
+    manual.start(0);
+    expect(manual.finish(135)).toMatchObject({phase: 'complete', frame: 135});
+    expect(manual.advance(1_000)).toMatchObject({phase: 'complete', frame: 135});
+    expect(manual.replay(2_000)).toMatchObject({phase: 'manual', frame: 45});
+
+    const reduced = new PlaybackController({reducedMotion: true});
+    reduced.start(0);
+    expect(reduced.finish(473)).toMatchObject({phase: 'complete', frame: 473});
+    expect(reduced.advance(1_000)).toMatchObject({phase: 'complete', frame: 473});
+    expect(reduced.replay(2_000)).toMatchObject({phase: 'manual', frame: 45});
+  });
+
+  it('preserves timestamp-backward rejection before terminal completion', () => {
+    const controller = new PlaybackController();
+    controller.start(1_000);
+    expect(() => controller.advance(999)).toThrow('Timestamp cannot move backwards');
   });
 });
 
 describe('recording bridge contract', () => {
   it('recognizes only the exact recording query with no hash', () => {
-    expect(isExactRecordingMode({search: '?record=1', hash: ''})).toBe(true);
+    expect(isExactRecordingMode({search: '?record=1&case=SYN-NORMAL-001', hash: ''})).toBe(true);
+    expect(isExactRecordingMode({search: '?record=1&case=SYN-BLOCK-001', hash: ''})).toBe(true);
+    expect(isExactRecordingMode({search: '?record=1&case=SYN-WITHHOLD-001', hash: ''})).toBe(true);
+    expect(isExactRecordingMode({search: '?record=1', hash: ''})).toBe(false);
+    expect(isExactRecordingMode({search: '?record=1&case=UNKNOWN', hash: ''})).toBe(false);
     expect(isExactRecordingMode({search: '?record=1&x=1', hash: ''})).toBe(false);
     expect(isExactRecordingMode({search: '?RECORD=1', hash: ''})).toBe(false);
     expect(isExactRecordingMode({search: '?record=1', hash: '#frame'})).toBe(false);
   });
 
   it('commits a frame, loads both fonts, waits two paints, and verifies the stage', async () => {
-    let currentState = stateAt(0, fixture);
+    let currentState = stateAt(0, normalCase);
     const order: string[] = [];
     const fonts = {
       ready: Promise.resolve(),
@@ -189,7 +217,7 @@ describe('recording bridge contract', () => {
     const bridge = createRecordingBridge({
       ready: Promise.resolve(),
       commitFrame: async (frame) => {
-        currentState = stateAt(frame, fixture);
+        currentState = stateAt(frame, normalCase);
         stage.dataset.frame = String(frame);
         order.push(`commit:${frame}`);
       },
@@ -227,7 +255,7 @@ describe('recording bridge contract', () => {
     const stage = document.createElement('main');
     stage.dataset.frame = '0';
     stage.getBoundingClientRect = () => ({width: 1_919, height: 1_080}) as DOMRect;
-    const currentState = stateAt(0, fixture);
+    const currentState = stateAt(0, normalCase);
     const bridge = createRecordingBridge({
       ready: Promise.resolve(),
       commitFrame: async () => undefined,
@@ -248,7 +276,7 @@ describe('recording bridge contract', () => {
     const stage = document.createElement('main');
     stage.dataset.frame = '0';
     stage.getBoundingClientRect = () => ({width: 1_920, height: 1_080}) as DOMRect;
-    const currentState = stateAt(0, fixture);
+    const currentState = stateAt(0, normalCase);
     const bridge = createRecordingBridge({
       ready: Promise.resolve(),
       commitFrame: async () => undefined,
@@ -267,6 +295,38 @@ describe('recording bridge contract', () => {
 });
 
 describe('DemoRuntime layering', () => {
+  it('removes the previous case snapshot and resets playback when selection changes', async () => {
+    const blockedCase = cases.find(({caseId}) => caseId === 'SYN-BLOCK-001')!;
+    const children = ({runtime, timeline, actions}: DemoRuntimeView) =>
+      createElement(
+        'div',
+        null,
+        createElement('output', {'data-testid': 'phase'}, `${runtime.phase}:${runtime.frame}`),
+        createElement('output', {'data-testid': 'case'}, timeline?.run.caseId ?? 'none'),
+        createElement('button', {type: 'button', onClick: () => actions.goTo(360)}, '프레임 이동'),
+      );
+    const view = render(
+      createElement(DemoRuntime, {
+        bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
+        children,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', {name: '프레임 이동'}));
+    expect(screen.getByTestId('phase')).toHaveTextContent('manual:360');
+    expect(screen.getByTestId('case')).toHaveTextContent(normalCase.caseId);
+
+    view.rerender(
+      createElement(DemoRuntime, {
+        bootstrap: {kind: 'ready', cases, selectedCaseId: blockedCase.caseId},
+        children,
+      }),
+    );
+
+    await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('idle:0'));
+    await waitFor(() => expect(screen.getByTestId('case')).toHaveTextContent(blockedCase.caseId));
+    expect(screen.getByTestId('case')).not.toHaveTextContent(normalCase.caseId);
+  });
+
   it('uses one injected clock instead of the animation-frame timestamp', () => {
     const callbacks: FrameRequestCallback[] = [];
     const requestFrame = vi
@@ -286,7 +346,7 @@ describe('DemoRuntime layering', () => {
     try {
       render(
         createElement(DemoRuntime, {
-          bootstrap: {kind: 'ready', fixture},
+          bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
           clock,
           children: ({runtime, actions}: DemoRuntimeView) =>
             createElement(
@@ -312,7 +372,7 @@ describe('DemoRuntime layering', () => {
   it('renders idle without advancing and enters manual mode on reduced-motion start', () => {
     render(
       createElement(DemoRuntime, {
-        bootstrap: {kind: 'ready', fixture},
+        bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
         reducedMotion: true,
         children: ({runtime, actions}: DemoRuntimeView) =>
           createElement(
@@ -342,7 +402,7 @@ describe('DemoRuntime layering', () => {
       );
     const view = render(
       createElement(DemoRuntime, {
-        bootstrap: {kind: 'ready', fixture},
+        bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
         children,
       }),
     );
@@ -351,7 +411,7 @@ describe('DemoRuntime layering', () => {
 
     view.rerender(
       createElement(DemoRuntime, {
-        bootstrap: {kind: 'ready', fixture},
+        bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
         reducedMotion: true,
         children,
       }),
@@ -360,7 +420,7 @@ describe('DemoRuntime layering', () => {
   });
 
   it('publishes a fail-closed recording bridge, ignores keys, and commits the same frame', async () => {
-    window.history.replaceState(null, '', '/?record=1');
+    window.history.replaceState(null, '', '/?record=1&case=SYN-NORMAL-001');
     const bounds = vi
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
       .mockReturnValue({width: 1_920, height: 1_080} as DOMRect);
@@ -387,7 +447,7 @@ describe('DemoRuntime layering', () => {
     try {
       render(
         createElement(DemoRuntime, {
-          bootstrap: {kind: 'ready', fixture},
+          bootstrap: {kind: 'ready', cases, selectedCaseId: normalCase.caseId},
           children: ({runtime, timeline}: DemoRuntimeView) =>
             createElement(
               'main',

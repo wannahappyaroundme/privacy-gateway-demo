@@ -1,7 +1,7 @@
 import {MANUAL_STOPS} from './timeline';
 
 export const AUTO_END_FRAME = 899;
-export const AUTO_DURATION_MS = 22_000;
+export const AUTO_DURATION_MS = 8_000;
 export const COUNTDOWN_DURATION_MS = 3_000;
 
 export type EntryPhase =
@@ -29,7 +29,8 @@ export type DemoAction =
   | {type: 'ENTER_MANUAL'}
   | {type: 'GO_TO'; frame: number}
   | {type: 'NEXT'}
-  | {type: 'PREVIOUS'};
+  | {type: 'PREVIOUS'}
+  | {type: 'FINISH'; frame: number};
 
 export type PlaybackControllerOptions = {
   reducedMotion?: boolean;
@@ -49,8 +50,8 @@ function assertTimestamp(value: number): void {
 }
 
 function assertManualFrame(frame: number): void {
-  if (!Number.isInteger(frame) || frame < 0 || frame > 989) {
-    throw new RangeError('Manual frame must be an integer from 0 to 989');
+  if (!Number.isInteger(frame) || frame < 0 || frame > AUTO_END_FRAME) {
+    throw new RangeError('Manual frame must be an integer from 0 to 899');
   }
 }
 
@@ -148,6 +149,8 @@ export class PlaybackController {
         return this.next();
       case 'PREVIOUS':
         return this.previous();
+      case 'FINISH':
+        return this.finish(action.frame);
     }
   }
 
@@ -209,6 +212,28 @@ export class PlaybackController {
     return this.start(now);
   }
 
+  finish(frame: number): RuntimeState {
+    assertManualFrame(frame);
+    if (this.#state.phase === 'complete') return this.#state;
+    this.#countdownEpoch = null;
+    this.#playbackEpoch = null;
+    return this.#set({
+      phase: 'complete',
+      frame,
+      elapsedMs: Math.min(
+        AUTO_DURATION_MS,
+        (frame * AUTO_DURATION_MS) / (AUTO_END_FRAME + 1),
+      ),
+      countdownLabel: null,
+    });
+  }
+
+  reset(): RuntimeState {
+    this.#countdownEpoch = null;
+    this.#playbackEpoch = null;
+    return this.#set(INITIAL_STATE);
+  }
+
   handleVisibilityHidden(): RuntimeState {
     if (this.#state.phase === 'countdown') {
       this.#countdownEpoch = null;
@@ -239,6 +264,7 @@ export class PlaybackController {
 
   requireManualOnly(): RuntimeState {
     this.#manualOnly = true;
+    if (this.#state.phase === 'complete') return this.#state;
     if (this.#state.phase === 'playing' || this.#state.phase === 'paused') {
       this.#countdownEpoch = null;
       this.#playbackEpoch = null;

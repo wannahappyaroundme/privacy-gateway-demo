@@ -1,15 +1,6 @@
-import type {ValidatedFixture} from './schema';
+import type {RunSnapshot, RunStage} from '../prototype/run';
 
-export type SceneId =
-  | 'overview'
-  | 'gap'
-  | 'detect'
-  | 'protect'
-  | 'route'
-  | 'inspect'
-  | 'result'
-  | 'finish'
-  | 'withheld';
+export type SceneId = 'detect' | 'protect' | 'route' | 'inspect' | 'result';
 
 export type PointerPhase = 'hidden' | 'moving' | 'holding' | 'pressed' | 'released';
 
@@ -40,15 +31,9 @@ export type InspectionState = {
   disclosureAllowed: boolean;
 };
 
-export type VerifiedField = Readonly<ValidatedFixture['verifiedResult'][number]>;
-
-export type TimelineResult =
-  | null
-  | {kind: 'verified'; fields: readonly VerifiedField[]}
-  | {kind: 'withheld'; reason: string; helpExpanded: boolean};
-
 export type TimelineState = {
   frame: number;
+  runStage: Exclude<RunStage, 'idle'>;
   scene: SceneId;
   pointer: VirtualPointerState;
   stageScrollY: number;
@@ -60,5 +45,5 @@ export type TimelineState = {
   inspection: InspectionState;
   resultRevealProgress: number;
   accessibilityStatus: string;
-  result: TimelineResult;
+  run: RunSnapshot;
 };

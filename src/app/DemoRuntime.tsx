@@ -7,7 +7,8 @@ import {
   useState,
 } from 'react';
 
-import type {ValidatedFixture} from '../demo/schema';
+import type {SyntheticCase} from '../prototype/contracts';
+import type {RunOutcome} from '../prototype/run';
 import {
   PlaybackController,
   type RuntimeState,
@@ -25,7 +26,7 @@ export type BootstrapState =
   | {kind: 'loading'}
   | {kind: 'empty'}
   | {kind: 'invalid'; rule: string}
-  | {kind: 'ready'; fixture: ValidatedFixture};
+  | {kind: 'ready'; cases: readonly SyntheticCase[]; selectedCaseId: string};
 
 export type RuntimeActions = {
   start(): void;
@@ -63,6 +64,13 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return target.closest('button, a, input, select, textarea, summary, [contenteditable="true"]') !== null;
 }
 
+function isTerminalOutcome(outcome: RunOutcome): boolean {
+  return outcome === 'VERIFIED' ||
+    outcome === 'REQUEST_BLOCKED_UNSUPPORTED' ||
+    outcome === 'RUN_FAILED' ||
+    outcome.startsWith('RESPONSE_WITHHELD_');
+}
+
 export function DemoRuntime({
   bootstrap,
   reducedMotion = false,
@@ -83,8 +91,13 @@ export function DemoRuntime({
   const recordingMode =
     typeof window !== 'undefined' && isExactRecordingMode(window.location);
 
-  const timeline =
-    bootstrap.kind === 'ready' ? stateAt(runtime.frame, bootstrap.fixture) : null;
+  const selectedCase = bootstrap.kind === 'ready'
+    ? bootstrap.cases.find(({caseId}) => caseId === bootstrap.selectedCaseId) ?? null
+    : null;
+  const [activeCaseId, setActiveCaseId] = useState(selectedCase?.caseId ?? null);
+  const timeline = selectedCase !== null && activeCaseId === selectedCase.caseId
+    ? stateAt(runtime.frame, selectedCase)
+    : null;
   const timelineRef = useRef<TimelineState | null>(null);
 
   const pendingCommit = useRef<{
@@ -100,6 +113,36 @@ export function DemoRuntime({
       pending.resolve();
     }
   }, [recordingCommit, timeline]);
+
+  useLayoutEffect(() => {
+    const nextCaseId = selectedCase?.caseId ?? null;
+    if (nextCaseId === activeCaseId) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setRuntime(controller.reset());
+      setActiveCaseId(nextCaseId);
+    });
+    return () => {
+      active = false;
+    };
+  }, [activeCaseId, controller, selectedCase]);
+
+  useLayoutEffect(() => {
+    if (
+      timeline !== null &&
+      runtime.phase !== 'complete' &&
+      isTerminalOutcome(timeline.run.outcome)
+    ) {
+      let active = true;
+      queueMicrotask(() => {
+        if (active) setRuntime(controller.finish(runtime.frame));
+      });
+      return () => {
+        active = false;
+      };
+    }
+  }, [controller, runtime.frame, runtime.phase, timeline]);
 
   const actions = useMemo<RuntimeActions>(
     () => ({
@@ -234,7 +277,14 @@ export function DemoRuntime({
       requestAnimationFrame: requestFrame,
     });
     return publishRecordingBridge(window, bridge, true);
-  }, [bootstrap.kind, controller, recordingMode, recordingReady]);
+  }, [
+    bootstrap.kind,
+    controller,
+    recordingMode,
+    recordingReady,
+    selectedCase?.caseId,
+    timeline?.run.caseId,
+  ]);
 
   return children({bootstrap, runtime, timeline, recordingMode, actions});
 }

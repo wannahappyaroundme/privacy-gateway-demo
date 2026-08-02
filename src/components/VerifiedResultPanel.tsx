@@ -1,8 +1,12 @@
 import {COPY} from '../content/copy';
-import type {VerifiedField} from '../demo/state';
+type ResultField = Readonly<{
+  label: string;
+  value: string;
+  evidence: string;
+}>;
 
 type VerifiedResultPanelProps = {
-  fields: readonly VerifiedField[];
+  fields: readonly ResultField[];
   revealProgress: number;
 };
 

@@ -25,8 +25,8 @@ export type RecordingBridgeDependencies = {
 };
 
 function assertRecordingFrame(frame: number): void {
-  if (!Number.isInteger(frame) || frame < 0 || frame > 989) {
-    throw new RangeError('Recording frame must be an integer from 0 to 989');
+  if (!Number.isInteger(frame) || frame < 0 || frame > 899) {
+    throw new RangeError('Recording frame must be an integer from 0 to 899');
   }
 }
 

@@ -19,14 +19,15 @@ const FLOW_STEPS = [
 ] as const;
 
 function productState(view: DemoRuntimeView): ProductState {
-  const frame = view.timeline?.frame ?? 0;
-  if (view.timeline?.result?.kind === 'withheld') return 'withheld';
+  const outcome = view.timeline?.run.outcome;
+  const runStage = view.timeline?.runStage;
+  if (view.runtime.phase === 'complete' && outcome !== 'VERIFIED') return 'withheld';
   if (view.runtime.phase === 'idle') return 'idle';
-  if (view.runtime.phase === 'complete' || frame >= 690) return 'complete';
-  if (frame < 180) return 'detecting';
-  if (frame < 420) return 'protecting';
-  if (frame < 540) return 'generating';
-  return 'inspecting';
+  if (outcome === 'VERIFIED') return 'complete';
+  if (runStage === 'protected') return 'protecting';
+  if (runStage === 'mocked') return 'generating';
+  if (runStage === 'inspected') return 'inspecting';
+  return 'detecting';
 }
 
 function stateIndex(state: ProductState): number {
@@ -41,6 +42,9 @@ function progressBetween(frame: number, start: number, end: number): number {
 
 function ConsultationPanel({view, state}: {view: DemoRuntimeView; state: ProductState}) {
   if (view.bootstrap.kind !== 'ready' || view.timeline === null) return null;
+  const {cases, selectedCaseId} = view.bootstrap;
+  const selectedCase = cases.find(({caseId}) => caseId === selectedCaseId);
+  if (!selectedCase) return null;
   const frame = view.timeline.frame;
   const found = state === 'idle' ? 0 : Math.min(3, Math.ceil(progressBetween(frame, 0, 180) * 3));
   const canAdvanceManually = !view.recordingMode &&
@@ -71,7 +75,7 @@ function ConsultationPanel({view, state}: {view: DemoRuntimeView; state: Product
           <p className="panel__eyebrow">은행 상담 업무</p>
           <h2 id="consultation-title">고객 상담 메모</h2>
         </div>
-        <span className="case-id">{view.bootstrap.fixture.case.caseId}</span>
+        <span className="case-id">{selectedCase.label}</span>
       </div>
 
       <div className="consultation-document">
@@ -79,7 +83,7 @@ function ConsultationPanel({view, state}: {view: DemoRuntimeView; state: Product
           <span>상담 기록</span>
           <strong>저장됨</strong>
         </div>
-        <p>{view.bootstrap.fixture.case.sourceText}</p>
+        <p>{selectedCase.sourceText}</p>
         <div className="detected-entities" aria-label="개인정보 유형">
           {['이름', '연락처', '계좌정보'].map((label, index) => (
             <span key={label} className={found > index ? 'is-found' : ''}>
@@ -174,24 +178,24 @@ function GatewayActivity({view, state}: {view: DemoRuntimeView; state: ProductSt
 
 function ResultWorkspace({view, state}: {view: DemoRuntimeView; state: ProductState}) {
   if (view.bootstrap.kind !== 'ready' || view.timeline === null) return null;
-  const result = view.timeline.result;
+  const {run} = view.timeline;
 
-  if (result?.kind === 'withheld') {
+  if (state === 'withheld') {
     return (
       <section className="product-panel result-workspace result-workspace--withheld">
         <BlockedResultPanel
-          reason={result.reason}
-          marker={view.bootstrap.fixture.blockReason.mutatedMarker}
-          helpExpanded={result.helpExpanded}
+          reason={COPY.blocked.description}
+          marker="-"
+          helpExpanded={false}
           onPrevious={() => view.actions.goTo(610)}
-          onHelp={() => view.actions.goTo(975)}
-          onSuccess={() => view.actions.goTo(750)}
+          onHelp={() => view.actions.goTo(610)}
+          onSuccess={() => view.actions.goTo(790)}
         />
       </section>
     );
   }
 
-  const showResult = state === 'complete' && result?.kind === 'verified';
+  const showResult = state === 'complete' && run.verifiedFields !== null;
   const writing = state === 'generating';
   const inspecting = state === 'inspecting';
 
@@ -211,15 +215,21 @@ function ResultWorkspace({view, state}: {view: DemoRuntimeView; state: ProductSt
         <div className="product-result" data-testid="verified-result">
           <div className="product-result__success"><span aria-hidden="true">✓</span><div><strong>{COPY.workspace.complete}</strong><p>{COPY.workspace.completeDescription}</p></div></div>
           <dl>
-            {result.fields.map((field) => (
-              <div key={field.label} className={field.label === '직원이 확인할 항목' ? 'needs-review' : ''}>
-                <dt>{field.label}</dt><dd>{field.value}</dd><dd className="result-evidence">{field.evidence}</dd>
+            {[
+              ['상담 목적', run.verifiedFields?.purpose, '합성 상담 메모'],
+              ['고객 요청', run.verifiedFields?.customerRequest, '합성 상담 메모'],
+              ['직원이 안내한 내용', run.verifiedFields?.employeeGuidance, '입력 문장 근거 있음'],
+              ['직원이 확인할 항목', run.verifiedFields?.itemsToConfirm || '-', '사람이 확인할 항목'],
+              ['다음 조치', run.verifiedFields?.nextAction, '합성 상담 메모'],
+            ].map(([label, value, evidence]) => (
+              <div key={label} className={label === '직원이 확인할 항목' ? 'needs-review' : ''}>
+                <dt>{label}</dt><dd>{value}</dd><dd className="result-evidence">{evidence}</dd>
               </div>
             ))}
           </dl>
           <div className="result-actions">
             <button type="button" className="button-primary" onClick={view.actions.replay}>{COPY.workspace.reset}</button>
-            <button type="button" onClick={() => view.actions.goTo(945)}>{COPY.workspace.withheld}</button>
+            <button type="button" onClick={() => view.actions.goTo(610)}>{COPY.workspace.withheld}</button>
           </div>
         </div>
       ) : (
@@ -243,6 +253,8 @@ export function ProductWorkspace({view}: {view: DemoRuntimeView}) {
       className="product-workspace"
       data-testid="product-workspace"
       data-product-state={state}
+      data-case-id={view.timeline?.run.caseId}
+      data-run-outcome={view.timeline?.run.outcome}
     >
       <header className="workspace-heading">
         <div>
