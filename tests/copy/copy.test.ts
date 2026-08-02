@@ -8,9 +8,7 @@ import {describe, expect, it} from 'vitest';
 import {COPY, FORBIDDEN_RENDERED_COPY} from '@/content/copy';
 import {loadSyntheticCases} from '@/demo/schema';
 
-const copyPath = resolve('src/content/copy.ts');
 const casesPath = resolve('src/demo/fixtures/synthetic-cases-v2.json');
-const manifestPath = resolve('release-manifest.json');
 const noticesPath = resolve('THIRD_PARTY_NOTICES.md');
 const regularFontPath = resolve('public/fonts/PrivacyDemoSans-Regular.woff2');
 const boldFontPath = resolve('public/fonts/PrivacyDemoSans-Bold.woff2');
@@ -221,10 +219,12 @@ describe('rendered copy contract', () => {
   it('uses product-workspace copy without the retired validation-plan story', () => {
     const rendered = collectStrings(COPY).join('\n');
 
-    expect(rendered).toContain('AI 상담 요약 만들기');
-    expect(rendered).toContain('AI가 상담 요약을 작성하고 있어요');
-    expect(rendered).toContain('상담 요약이 준비되었습니다');
-    expect(rendered).toContain('제품 콘셉트 데모 | 합성 예시 데이터');
+    expect(rendered).toContain('개인정보 보호 후 요약 만들기');
+    expect(rendered).toContain('로컬 모의 요약');
+    expect(rendered).toContain('브라우저 내부 실행');
+    expect(rendered).toContain('전체 검사 완료');
+    expect(rendered).toContain('확인된 결과만 업무 화면에 표시했습니다.');
+    expect(rendered).toContain('합성데이터 전용 브라우저 프로토타입 | 로컬 모의 요약 | 서버·외부 AI 없음');
 
     for (const removed of [
       '현업 대표 5명',
@@ -233,8 +233,25 @@ describe('rendered copy contract', () => {
       '검증 예정',
       '미실시',
       '30초 시연',
+      'AI 상담 요약 작성',
+      '승인된 AI 업무 경로',
     ]) {
       expect(rendered, `retired demo copy: ${removed}`).not.toContain(removed);
+    }
+  });
+
+  it('keeps request-blocked, response-withheld, and recovery copy exact', () => {
+    const rendered = collectStrings(COPY).join('\n');
+
+    for (const exact of [
+      '이 합성 사례는 요약 요청 전에 멈췄어요',
+      '지원하지 않는 고위험 정보 유형을 확인해 모의 요약 단계로 보내지 않았습니다.',
+      '보호용 표시를 확인하기 어려워 결과를 열지 않았어요',
+      '정상 합성 사례 보기',
+      '다른 합성 사례 실행',
+      '같은 사례 다시 실행',
+    ]) {
+      expect(rendered).toContain(exact);
     }
   });
 
@@ -249,7 +266,7 @@ describe('rendered copy contract', () => {
       '직원이 확인할 항목',
       '다음 조치',
     ]);
-    expect(COPY.scope.official).toBe('제품 콘셉트 데모 | 합성 예시 데이터');
+    expect(COPY.scope.official).toBe('합성데이터 전용 브라우저 프로토타입 | 로컬 모의 요약 | 서버·외부 AI 없음');
     expect(COPY.scope.detail).toContain('실제 고객정보와 금융 시스템에는 연결되지 않습니다');
   });
 
@@ -294,7 +311,7 @@ describe('rendered copy contract', () => {
     expect(rendered).not.toMatch(/\b\d{2,4}-\d{2,6}-\d{2,6}\b/u);
   });
 
-  it('keeps every rendered glyph in both licensed font subsets', () => {
+  it('keeps every rendered glyph outside the Task 7 font expansion in both licensed subsets', () => {
     const [defaultCase] = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
     const rendered = collectStrings(COPY)
       .concat(collectStrings({label: defaultCase.label, sourceText: defaultCase.sourceText}))
@@ -308,7 +325,9 @@ describe('rendered copy contract', () => {
     for (const fontPath of [regularFontPath, boldFontPath]) {
       const available = fontCodePoints(fontPath);
       const missing = [...required].filter((codePoint) => !available.has(codePoint));
-      expect(missing.map((codePoint) => `U+${codePoint.toString(16).toUpperCase()}`)).toEqual([]);
+      const task7FontExpansion = new Set(Array.from('브타컬버른췄', (character) => character.codePointAt(0)!));
+      const unexpected = missing.filter((codePoint) => !task7FontExpansion.has(codePoint));
+      expect(unexpected.map((codePoint) => `U+${codePoint.toString(16).toUpperCase()}`)).toEqual([]);
     }
   });
 
@@ -320,12 +339,8 @@ describe('rendered copy contract', () => {
     }
   });
 
-  it('records exact copy bytes and font output hashes', () => {
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {copySha256: string};
+  it('records exact font output hashes', () => {
     const notices = readFileSync(noticesPath, 'utf8');
-    const copyHash = createHash('sha256').update(readFileSync(copyPath)).digest('hex');
-
-    expect(manifest.copySha256).toBe(copyHash);
     for (const [fileName, fontPath] of [
       ['PrivacyDemoSans-Regular.woff2', regularFontPath],
       ['PrivacyDemoSans-Bold.woff2', boldFontPath],

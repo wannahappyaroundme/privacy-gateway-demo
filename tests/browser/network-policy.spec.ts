@@ -124,7 +124,7 @@ test.beforeEach(async ({page}) => {
   });
 });
 
-test('makes no application egress or browser storage writes across automatic, result, block, and help states', async ({page}) => {
+test('makes no application egress or browser storage writes across all three product outcomes', async ({page}) => {
   const unexpectedRequests: string[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
@@ -137,13 +137,19 @@ test('makes no application egress or browser storage writes across automatic, re
 
   await page.clock.install();
   await page.goto('./');
-  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
-  await page.clock.fastForward(22_100);
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+  await page.clock.fastForward(8_100);
   await expect(page.getByTestId('verified-result')).toBeVisible();
-  await page.getByRole('button', {name: '확인이 필요한 경우 보기'}).click();
-  await expect(page.getByTestId('blocked-result')).toBeVisible();
-  await page.getByRole('button', {name: '직접 작성 방법 보기'}).click();
-  await expect(page.locator('.help-steps')).toBeVisible();
+
+  await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption('SYN-BLOCK-001');
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+  await page.clock.fastForward(8_100);
+  await expect(page.getByTestId('request-blocked-result')).toBeVisible();
+
+  await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption('SYN-WITHHOLD-001');
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+  await page.clock.fastForward(8_100);
+  await expect(page.getByTestId('response-withheld-result')).toBeVisible();
 
   const state = await page.evaluate(() => window.__FPG_NETWORK_POLICY_TEST__);
   expect(unexpectedRequests).toEqual([]);

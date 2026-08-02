@@ -16,17 +16,17 @@ test('stops the normal runtime on its first published snapshot and replay remove
   await page.clock.install();
   await page.goto('./');
 
-  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
   await page.clock.fastForward(7_000);
 
   await expect(page.getByTestId('product-workspace')).toHaveAttribute('data-run-outcome', 'VERIFIED');
-  await expect(page.getByTestId('product-workspace')).toHaveAttribute('data-product-state', 'complete');
+  await expect(page.getByTestId('product-workspace')).toHaveAttribute('data-product-state', 'verified');
   await expect(page.getByTestId('verified-result')).toBeVisible();
   const terminalFrame = Number(await page.getByTestId('demo-stage').getAttribute('data-frame'));
   expect(terminalFrame).toBeGreaterThanOrEqual(743);
   expect(terminalFrame).toBeLessThan(899);
 
-  await page.getByRole('button', {name: '새 상담 요약'}).click();
+  await page.getByTestId('verified-result').getByRole('button', {name: '같은 사례 다시 실행'}).click();
   await expect(page.getByTestId('verified-result')).toHaveCount(0);
   await expect(page.getByTestId('product-workspace')).not.toHaveAttribute('data-run-outcome', 'VERIFIED');
 });
@@ -37,21 +37,21 @@ for (const scenario of [
     before: 742,
     terminal: 743,
     outcome: 'VERIFIED',
-    productState: 'complete',
+    productState: 'verified',
   },
   {
     caseId: 'SYN-BLOCK-001',
     before: 134,
     terminal: 135,
     outcome: 'REQUEST_BLOCKED_UNSUPPORTED',
-    productState: 'withheld',
+    productState: 'request-blocked',
   },
   {
     caseId: 'SYN-WITHHOLD-001',
     before: 472,
     terminal: 473,
     outcome: 'RESPONSE_WITHHELD_MARKER',
-    productState: 'withheld',
+    productState: 'response-withheld',
   },
 ] as const) {
   test(`records ${scenario.caseId} from its real terminal engine snapshot`, async ({page}) => {

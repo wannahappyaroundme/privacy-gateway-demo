@@ -54,7 +54,7 @@ function LiveRegion({view}: {view: DemoRuntimeView}) {
     if (current.phase === 'playing' && before.phase === 'idle') {
       setMessage('단디가 상담 메모의 개인정보 보호 처리를 시작했습니다.');
     } else if (current.outcome === 'VERIFIED' && before.outcome !== 'VERIFIED') {
-      setMessage('상담 요약이 준비되었습니다. 확인된 결과를 표시합니다.');
+      setMessage('전체 검사가 끝났습니다. 확인된 결과를 표시합니다.');
     } else if (
       current.phase === 'complete' &&
       current.outcome !== 'VERIFIED' &&
@@ -130,13 +130,29 @@ export function App() {
 
   const manualOnly = useStickyManualOnly();
 
+  const selectCase = (caseId: string) => {
+    setBootstrap((current) => {
+      if (current.kind !== 'ready' || !current.cases.some((item) => item.caseId === caseId)) {
+        return current;
+      }
+      return {...current, selectedCaseId: caseId};
+    });
+  };
+
   return (
-    <DemoRuntime bootstrap={bootstrap} manualOnly={manualOnly}>
+    <DemoRuntime
+      key={bootstrap.kind === 'ready' ? bootstrap.selectedCaseId : bootstrap.kind}
+      bootstrap={bootstrap}
+      manualOnly={manualOnly}
+    >
       {(view) => (
         <DemoShell frame={view.runtime.frame} recordingMode={view.recordingMode}>
-          <LiveRegion view={view} />
+          <LiveRegion
+            key={view.bootstrap.kind === 'ready' ? view.bootstrap.selectedCaseId : view.bootstrap.kind}
+            view={view}
+          />
           {view.bootstrap.kind === 'ready'
-            ? <ProductWorkspace view={view} />
+            ? <ProductWorkspace view={view} manualOnly={manualOnly} onCaseChange={selectCase} />
             : <BootstrapMessage bootstrap={view.bootstrap} />}
         </DemoShell>
       )}
