@@ -19,8 +19,8 @@ The two local WOFF2 files are modified, renamed, static subsets of the official 
 
 Repository-owned conversion helpers:
 
-- `scripts/fonts/make-privacy-demo-glyphs.py`: `4950cd86d0db3d1729e64cff207a18eac47db8a2d3b490e8ba22c69beb5ca454`
-- `scripts/fonts/rename-privacy-demo-font.py`: `82a0b6b948a474495f609ee11aeaa337c49411348c10a895150744c712cf7e26`
+- `scripts/fonts/make-privacy-demo-glyphs.py`: `e9d0219238bb402760eb192a31cb4088732a20e2c3a692306a3017bdb636801f`
+- `scripts/fonts/rename-privacy-demo-font.py`: `15559753953d638221a6c360b4351afff37f7ed17f4be441fd702b42452b1432`
 
 The helper files are durable equivalents of the temporary conversion helpers used for this build. They remove the original machine-specific repository path while preserving the glyph collection, family-name rewriting, and deterministic table ordering.
 
@@ -31,32 +31,47 @@ python3 -m venv /tmp/privacy-demo-font-build/venv
 /tmp/privacy-demo-font-build/venv/bin/python -m pip install fonttools==4.60.2 Brotli==1.1.0
 ```
 
-Place the verified source TTF at `/tmp/NotoSansKR-wght.ttf`, verify its SHA-256 against this notice, then run the exact glyph-list command:
+Place the verified source TTF at `/tmp/NotoSansKR-wght.ttf`, verify its SHA-256 against this notice, then create two independent build directories and glyph lists:
 
 ```text
-python3 scripts/fonts/make-privacy-demo-glyphs.py src/content/copy.ts src/demo/fixtures/synthetic-cases-v2.json /tmp/privacy-demo-font-build/privacy-demo-glyphs.txt
+mkdir -p /tmp/privacy-demo-font-build/review-a-20260803 /tmp/privacy-demo-font-build/review-b-20260803
+python3 scripts/fonts/make-privacy-demo-glyphs.py src/content/copy.ts src/demo/fixtures/synthetic-cases-v2.json /tmp/privacy-demo-font-build/review-a-20260803/privacy-demo-glyphs.txt
+python3 scripts/fonts/make-privacy-demo-glyphs.py src/content/copy.ts src/demo/fixtures/synthetic-cases-v2.json /tmp/privacy-demo-font-build/review-b-20260803/privacy-demo-glyphs.txt
 ```
 
-Exact Regular instancing, renaming, and subset commands:
+Exact Build A instancing, renaming, and subset commands:
 
 ```text
-/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.ttf "Privacy Demo Sans" Regular 400
-/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Regular.ttf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Regular.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Regular.ttf "Privacy Demo Sans" Regular 400
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Bold.ttf "Privacy Demo Sans" Bold 700
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Regular.ttf --text-file=/tmp/privacy-demo-font-build/review-a-20260803/privacy-demo-glyphs.txt --output-file=/tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Regular.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Bold.ttf --text-file=/tmp/privacy-demo-font-build/review-a-20260803/privacy-demo-glyphs.txt --output-file=/tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Bold.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
 ```
 
-Exact Bold instancing, renaming, and subset commands:
+Exact Build B instancing, renaming, and subset commands:
 
 ```text
-/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.ttf "Privacy Demo Sans" Bold 700
-/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/PrivacyDemoSans-Bold.ttf --text-file=/tmp/privacy-demo-font-build/privacy-demo-glyphs.txt --output-file=public/fonts/PrivacyDemoSans-Bold.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Regular.ttf "Privacy Demo Sans" Regular 400
+/tmp/privacy-demo-font-build/venv/bin/python scripts/fonts/rename-privacy-demo-font.py /tmp/NotoSansKR-wght.ttf /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Bold.ttf "Privacy Demo Sans" Bold 700
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Regular.ttf --text-file=/tmp/privacy-demo-font-build/review-b-20260803/privacy-demo-glyphs.txt --output-file=/tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Regular.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
+/tmp/privacy-demo-font-build/venv/bin/pyftsubset /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Bold.ttf --text-file=/tmp/privacy-demo-font-build/review-b-20260803/privacy-demo-glyphs.txt --output-file=/tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Bold.woff2 --flavor=woff2 --layout-features='*' --no-hinting --desubroutinize --name-IDs='*' --name-legacy --name-languages='*' --glyph-names --symbol-cmap --legacy-cmap --notdef-glyph --notdef-outline --recommended-glyphs --no-recalc-timestamp
 ```
 
 Output SHA-256:
 
-- `PrivacyDemoSans-Regular.woff2`: `f68511ea090456f02eb9bd0418d18ccb3fa6316cf74ee44d274a4c8fac442759`
-- `PrivacyDemoSans-Bold.woff2`: `b5bf22f6eead642ac7e7388804cb782c23eacb94af4ae178c36a00221f832456`
+- `PrivacyDemoSans-Regular.woff2`: `bdefa1c3069ef8a1d6d64cf865bd4ae9b7c2ea7b53c70af881b19b21eff25c88`
+- `PrivacyDemoSans-Bold.woff2`: `abe1552df4c9ef1cc6ccaeec1ce44cecc8e4b5058ea1048b3c5f80531c8abeb4`
 
-Repeat both preparation and subset commands into a second temporary output directory, then compare SHA-256 values. Two independent generations must match the hashes above byte-for-byte before replacing the repository WOFF2 files. The 9.9 MB source TTF, temporary static TTF files, and temporary glyph list are not committed.
+Compare the A and B outputs byte-for-byte before copying the reviewed A files into the repository:
+
+```text
+cmp /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Regular.woff2 /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Regular.woff2
+cmp /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Bold.woff2 /tmp/privacy-demo-font-build/review-b-20260803/PrivacyDemoSans-Bold.woff2
+cp /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Regular.woff2 public/fonts/PrivacyDemoSans-Regular.woff2
+cp /tmp/privacy-demo-font-build/review-a-20260803/PrivacyDemoSans-Bold.woff2 public/fonts/PrivacyDemoSans-Bold.woff2
+```
+
+The two documented independent generations must match the hashes above byte-for-byte. The 9.9 MB source TTF, temporary static TTF files, and temporary glyph lists are not committed.
 
 <!-- BEGIN GENERATED NPM DEPENDENCIES -->
 

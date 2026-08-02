@@ -245,7 +245,18 @@ describe('public release policy', () => {
     expect(policy.isAllowedSourcePath('artifacts/regression/07-response-withheld.png')).toBe(true);
     expect(policy.isAllowedSourcePath('artifacts/regression/07-type-protection-detail.png')).toBe(false);
     expect(policy.isAllowedSourcePath('artifacts/regression/08-explicit-block.png')).toBe(false);
-    expect(policy.isAllowedRepositoryPath('artifacts/submission/07-response-withheld.png')).toBe(true);
+    for (const file of [
+      '01-synthetic-source.png',
+      '02-type-protection.png',
+      '03-local-mock-summary.png',
+      '04-full-response-inspection.png',
+      '05-verified-result.png',
+      '06-request-blocked.png',
+      '07-response-withheld.png',
+    ]) {
+      expect(policy.isAllowedRepositoryPath(`artifacts/submission/${file}`), file).toBe(true);
+    }
+    expect(policy.isAllowedRepositoryPath('artifacts/submission/01-unreviewed.png')).toBe(false);
     expect(policy.isAllowedRepositoryPath('artifacts/submission/08-unreviewed.png')).toBe(false);
     expect(policy.isAllowedSourcePath('.superpowers/sdd/report.md')).toBe(false);
     expect(policy.isAllowedSourcePath('AGENTS.md')).toBe(false);

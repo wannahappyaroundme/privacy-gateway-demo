@@ -57,7 +57,7 @@ const SOURCE_PATHS = [
 const ARTIFACT_PATHS = [
   /^artifacts\/recording-check\.md$/u,
   /^artifacts\/regression\/(?:06-request-blocked|07-response-withheld)\.png$/u,
-  /^artifacts\/submission\/0[1-7]-[a-z0-9-]+\.png$/u,
+  /^artifacts\/submission\/(?:01-synthetic-source|02-type-protection|03-local-mock-summary|04-full-response-inspection|05-verified-result|06-request-blocked|07-response-withheld)\.png$/u,
 ];
 
 const SECRET_AND_PATH_RULES = [

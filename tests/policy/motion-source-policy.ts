@@ -37,6 +37,38 @@ const PUBLIC_CONTENT_RULES: readonly StaticRule[] = [
 ];
 
 const FIXTURE_SHORTCUT_FIELDS = ['expectedOutcome', 'verifiedResult', 'mockResponse'] as const;
+const PROTOTYPE_GLOBAL_OBJECTS = new Set([
+  'document',
+  'globalThis',
+  'navigator',
+  'self',
+  'window',
+]);
+const PROTOTYPE_COMPUTED_ROOTS = new Set([
+  ...PROTOTYPE_GLOBAL_OBJECTS,
+  'Date',
+  'Math',
+]);
+// Prototype modules intentionally reject aliases for browser/network/time sources.
+// This conservative boundary prevents computed-name bypasses; Math.imul is the one
+// reviewed deterministic primitive used by the local mock engine.
+const PROTOTYPE_FORBIDDEN_IDENTIFIERS = new Set([
+  'Date',
+  'EventSource',
+  'RTCPeerConnection',
+  'SharedWorker',
+  'WebSocket',
+  'Worker',
+  'XMLHttpRequest',
+  'caches',
+  'crypto',
+  'fetch',
+  'indexedDB',
+  'localStorage',
+  'performance',
+  'sendBeacon',
+  'sessionStorage',
+]);
 
 function staticRuleViolations(
   source: string,
@@ -60,6 +92,141 @@ function staticRuleViolations(
   return violations;
 }
 
+function staticStringValue(node: ts.Expression): string | null {
+  if (ts.isStringLiteralLike(node)) return node.text;
+  if (ts.isParenthesizedExpression(node)) return staticStringValue(node.expression);
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const left = staticStringValue(node.left);
+    const right = staticStringValue(node.right);
+    return left === null || right === null ? null : left + right;
+  }
+  if (ts.isTemplateExpression(node)) {
+    let value = node.head.text;
+    for (const span of node.templateSpans) {
+      const expression = staticStringValue(span.expression);
+      if (expression === null) return null;
+      value += expression + span.literal.text;
+    }
+    return value;
+  }
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === 'join' &&
+    ts.isArrayLiteralExpression(node.expression.expression) &&
+    node.arguments.length <= 1
+  ) {
+    const values = node.expression.expression.elements.map((element) =>
+      ts.isExpression(element) ? staticStringValue(element) : null,
+    );
+    const separator = node.arguments.length === 0 ? ',' : staticStringValue(node.arguments[0]);
+    return values.some((value) => value === null) || separator === null
+      ? null
+      : (values as string[]).join(separator);
+  }
+  return null;
+}
+
+function rootIdentifier(node: ts.Expression): string | null {
+  let current = node;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isPropertyAccessExpression(current) ||
+    ts.isElementAccessExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return ts.isIdentifier(current) ? current.text : null;
+}
+
+function isArrayLiteralJoin(node: ts.Node): node is ts.CallExpression {
+  return (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === 'join' &&
+    ts.isArrayLiteralExpression(node.expression.expression)
+  );
+}
+
+function isStringConstructionOperand(node: ts.Expression): boolean {
+  return (
+    ts.isStringLiteralLike(node) ||
+    ts.isTemplateExpression(node) ||
+    staticStringValue(node) !== null
+  );
+}
+
+function prototypeAstViolations(source: string, fileName: string): MotionPolicyViolation[] {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const violations: MotionPolicyViolation[] = [];
+  const report = (node: ts.Node, rule: string): void => {
+    const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+    violations.push({
+      file: fileName,
+      line: position.line + 1,
+      column: position.character + 1,
+      rule,
+    });
+  };
+  const containsForbiddenPublicContent = (value: string): boolean =>
+    PUBLIC_CONTENT_RULES.some(({pattern}) => {
+      pattern.lastIndex = 0;
+      return pattern.test(value);
+    });
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isElementAccessExpression(node)) {
+      const root = rootIdentifier(node.expression);
+      if (root !== null && PROTOTYPE_COMPUTED_ROOTS.has(root)) {
+        report(node, `prototype-computed-access:${root}`);
+      }
+    }
+    if (ts.isIdentifier(node) && PROTOTYPE_GLOBAL_OBJECTS.has(node.text)) {
+      report(node, `prototype-global-object:${node.text}`);
+    }
+    if (ts.isIdentifier(node) && PROTOTYPE_FORBIDDEN_IDENTIFIERS.has(node.text)) {
+      report(node, `prototype-forbidden-identifier:${node.text}`);
+    }
+    if (
+      ts.isIdentifier(node) &&
+      node.text === 'Math' &&
+      !(
+        ts.isPropertyAccessExpression(node.parent) &&
+        node.parent.expression === node &&
+        node.parent.name.text === 'imul'
+      )
+    ) {
+      report(node, 'prototype-global-object:Math');
+    }
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.PlusToken &&
+      (isStringConstructionOperand(node.left) || isStringConstructionOperand(node.right))
+    ) {
+      report(node, 'prototype-dynamic-string:concatenation');
+    }
+    if (isArrayLiteralJoin(node)) {
+      report(node, 'prototype-dynamic-string:array-join');
+    }
+    if (ts.isBinaryExpression(node) || ts.isTemplateExpression(node) || ts.isCallExpression(node)) {
+      const value = staticStringValue(node);
+      if (value !== null && containsForbiddenPublicContent(value)) {
+        report(node, 'prototype-dynamic-string:forbidden-content');
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return violations;
+}
+
 export function findPrototypeSourcePolicyViolations(
   source: string,
   fileName: string,
@@ -73,6 +240,7 @@ export function findPrototypeSourcePolicyViolations(
   const violations = staticRuleViolations(source, fileName, PUBLIC_CONTENT_RULES);
   if (prototype) {
     violations.push(...staticRuleViolations(source, fileName, PROTOTYPE_BOUNDARY_RULES));
+    violations.push(...prototypeAstViolations(source, fileName));
   }
   if (fixture) {
     const fixtureRules = FIXTURE_SHORTCUT_FIELDS.map((field) => ({

@@ -178,11 +178,11 @@ try {
     }
     assert.doesNotMatch(
       consoleContent,
-      /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)_\d+\]|"(?:purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)"\s*:/u,
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|"(?:purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)"\s*:/u,
     );
     assert.doesNotMatch(
       evidenceText,
-      /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)_\d+\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
     );
     const observed = await page.evaluate(() => window.__FPG_RECORDING_CHECK__);
     assert.deepEqual(observed.apiCalls, [], `${caseId}: browser API call`);

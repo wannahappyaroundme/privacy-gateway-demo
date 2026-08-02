@@ -217,6 +217,83 @@ describe('functional prototype source policy', () => {
     expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).not.toEqual([]);
   });
 
+  it.each([
+    [
+      'computed global fetch',
+      `export const run = () => globalThis['fe' + 'tch']('/api');`,
+      'prototype-computed-access:globalThis',
+    ],
+    [
+      'computed navigator beacon',
+      `export const run = () => navigator['send' + 'Beacon']('/audit');`,
+      'prototype-computed-access:navigator',
+    ],
+    [
+      'computed document cookie',
+      `export const run = () => document['coo' + 'kie'];`,
+      'prototype-computed-access:document',
+    ],
+    [
+      'computed wall clock',
+      `export const run = () => Date['no' + 'w']();`,
+      'prototype-computed-access:Date',
+    ],
+    [
+      'computed random source',
+      `export const run = () => Math['ran' + 'dom']();`,
+      'prototype-computed-access:Math',
+    ],
+    [
+      'dynamic computed global key',
+      `export const run = (key: string) => globalThis[key]('/api');`,
+      'prototype-computed-access:globalThis',
+    ],
+    [
+      'nested computed service worker access',
+      `export const run = () => navigator['service' + 'Worker']['register']('/sw.js');`,
+      'prototype-computed-access:navigator',
+    ],
+    [
+      'joined external provider brand',
+      `export const provider = ['Open', 'AI'].join('');`,
+      'prototype-dynamic-string:forbidden-content',
+    ],
+    [
+      'concatenated actual-looking phone',
+      `export const identifier = '010-' + '1234-5678';`,
+      'prototype-dynamic-string:forbidden-content',
+    ],
+    [
+      'partly dynamic forbidden-name concatenation',
+      `export const provider = (suffix: string) => 'Open' + suffix;`,
+      'prototype-dynamic-string:concatenation',
+    ],
+    [
+      'partly dynamic array join',
+      `export const provider = (separator: string) => ['Open', 'AI'].join(separator);`,
+      'prototype-dynamic-string:array-join',
+    ],
+    [
+      'aliased fetch identifier',
+      `const request = fetch; export const run = () => request('/api');`,
+      'prototype-forbidden-identifier:fetch',
+    ],
+    [
+      'aliased Date object',
+      `const clock = Date; export const run = () => clock['now']();`,
+      'prototype-forbidden-identifier:Date',
+    ],
+    [
+      'aliased Math object',
+      `const randomSource = Math; export const run = () => randomSource['random']();`,
+      'prototype-global-object:Math',
+    ],
+  ])('rejects %s bypass syntax', (_name, source, expectedRule) => {
+    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: expectedRule})]),
+    );
+  });
+
   it.each(['expectedOutcome', 'verifiedResult', 'mockResponse'])(
     'rejects the %s expected-output shortcut in a reviewed fixture',
     (field) => {

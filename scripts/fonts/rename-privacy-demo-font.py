@@ -21,6 +21,7 @@ replacements = {
     6: postscript_name,
     16: family,
     17: subfamily,
+    25: compact_family,
 }
 
 for record in name_table.names:

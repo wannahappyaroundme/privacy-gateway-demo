@@ -198,10 +198,10 @@ test('keeps every reviewed outcome free of egress, persistence, console content,
       expect(evidenceText, `${scenario.caseId}: evidence content leak`).not.toContain(value);
     }
     expect(consoleContent, scenario.caseId).not.toMatch(
-      /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)_\d+\]|"(?:purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)"\s*:/u,
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|"(?:purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)"\s*:/u,
     );
     expect(evidenceText, scenario.caseId).not.toMatch(
-      /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)_\d+\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
     );
   }
 });

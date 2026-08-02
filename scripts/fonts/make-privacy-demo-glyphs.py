@@ -21,9 +21,11 @@ copy_path, fixture_path, output_path = map(Path, sys.argv[1:4])
 copy_source = copy_path.read_text(encoding='utf-8').split(
     'export const FORBIDDEN_RENDERED_COPY', 1
 )[0]
+if '`' in copy_source:
+    raise ValueError('template literals are not supported in rendered COPY; use quoted literals')
 copy_strings = [
-    ast.literal_eval("'" + match.group(1) + "'")
-    for match in re.finditer(r"'((?:[^'\\]|\\.)*)'", copy_source)
+    ast.literal_eval(match.group(0))
+    for match in re.finditer(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"", copy_source)
 ]
 fixture_strings = list(
     string_values(json.loads(fixture_path.read_text(encoding='utf-8')))

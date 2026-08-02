@@ -1,6 +1,8 @@
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {execFileSync, spawnSync} from 'node:child_process';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join, resolve} from 'node:path';
 import {brotliDecompressSync} from 'node:zlib';
 
 import {describe, expect, it} from 'vitest';
@@ -189,30 +191,34 @@ function fontCodePoints(fontPath: string): Set<number> {
   return codePoints;
 }
 
-function fontNames(fontPath: string): string[] {
+type FontNameRecord = Readonly<{nameId: number; value: string}>;
+
+function fontNameRecords(fontPath: string): FontNameRecord[] {
   const table = readWoff2Tables(fontPath).get('name');
   if (!table) throw new Error('WOFF2 name table is missing');
   const count = table.readUInt16BE(2);
   const stringsOffset = table.readUInt16BE(4);
-  const names: string[] = [];
+  const records: FontNameRecord[] = [];
   for (let index = 0; index < count; index += 1) {
     const recordOffset = 6 + index * 12;
     const platform = table.readUInt16BE(recordOffset);
+    const nameId = table.readUInt16BE(recordOffset + 6);
     const length = table.readUInt16BE(recordOffset + 8);
     const offset = table.readUInt16BE(recordOffset + 10);
     const value = table.subarray(stringsOffset + offset, stringsOffset + offset + length);
-    if (platform === 3) {
+    if (platform === 0 || platform === 3) {
       const swapped = Buffer.alloc(value.length);
       for (let byte = 0; byte < value.length; byte += 2) {
         swapped[byte] = value[byte + 1];
         swapped[byte + 1] = value[byte];
       }
-      names.push(swapped.toString('utf16le'));
+      records.push({nameId, value: swapped.toString('utf16le')});
     } else if (platform === 1) {
-      names.push(value.toString('ascii'));
+      records.push({nameId, value: value.toString('ascii')});
     }
   }
-  return names;
+  if (records.length !== count) throw new Error('WOFF2 name table has an unsupported platform');
+  return records;
 }
 
 function fontWeight(fontPath: string): number {
@@ -358,17 +364,66 @@ describe('rendered copy contract', () => {
     }
   });
 
+  it('collects double-quoted copy and rejects template literals instead of silently omitting glyphs', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'privacy-demo-glyph-test-'));
+    const copyPath = join(directory, 'copy.ts');
+    const fixturePath = join(directory, 'fixture.json');
+    const outputPath = join(directory, 'glyphs.txt');
+
+    try {
+      writeFileSync(
+        copyPath,
+        `export const COPY = {single: '가', double: "나"};\nexport const FORBIDDEN_RENDERED_COPY = [];\n`,
+      );
+      writeFileSync(fixturePath, '{"cases":[]}');
+      execFileSync('python3', [glyphHelperPath, copyPath, fixturePath, outputPath]);
+      expect(readFileSync(outputPath, 'utf8')).toContain('가');
+      expect(readFileSync(outputPath, 'utf8')).toContain('나');
+
+      writeFileSync(
+        copyPath,
+        "export const COPY = {template: `다`};\nexport const FORBIDDEN_RENDERED_COPY = [];\n",
+      );
+      const templateResult = spawnSync(
+        'python3',
+        [glyphHelperPath, copyPath, fixturePath, outputPath],
+        {encoding: 'utf8'},
+      );
+      expect(templateResult.status).not.toBe(0);
+      expect(templateResult.stderr).toContain('template literals are not supported');
+    } finally {
+      rmSync(directory, {recursive: true, force: true});
+    }
+  });
+
   it('uses static 400 and 700 OFL subsets under the unreserved modified family name', () => {
+    const familyNameIds = new Set([1, 2, 3, 4, 6, 16, 17, 21, 22, 25]);
+    const acknowledgementNameIds = new Set([0, 13, 14]);
+
     for (const [fontPath, weight] of [
       [regularFontPath, 400],
       [boldFontPath, 700],
     ] as const) {
       const tables = readWoff2Tables(fontPath);
-      const names = fontNames(fontPath);
+      const records = fontNameRecords(fontPath);
+      const names = records.map(({value}) => value);
       expect(names).toContain('Privacy Demo Sans');
-      expect(names).not.toContain('Noto Sans KR');
       expect(names.some((name) => name.includes('2014-2021 Adobe'))).toBe(true);
       expect(names.some((name) => name.includes('SIL Open Font License'))).toBe(true);
+      expect(names.some((name) => name.includes("Reserved Font Name 'Source'"))).toBe(true);
+      for (const {nameId, value} of records) {
+        if (/Noto(?:\s*Sans\s*KR|SansKR)?/iu.test(value)) {
+          expect(acknowledgementNameIds.has(nameId), `name ID ${nameId}: ${value}`).toBe(true);
+        }
+        if (familyNameIds.has(nameId)) {
+          expect(value, `family-related name ID ${nameId}`).not.toMatch(/Noto/iu);
+        }
+      }
+      const variationPrefixes = records
+        .filter(({nameId}) => nameId === 25)
+        .map(({value}) => value);
+      expect(variationPrefixes.length).toBeGreaterThan(0);
+      expect(new Set(variationPrefixes)).toEqual(new Set(['PrivacyDemoSans']));
       expect(fontWeight(fontPath)).toBe(weight);
       expect([...tables.keys()]).not.toEqual(expect.arrayContaining(['fvar', 'gvar', 'avar']));
     }
