@@ -271,6 +271,96 @@ describe('functional prototype source policy', () => {
       `function client() { return {get: (path: string) => path}; } client().get('/api');`,
       'prototype-call:unreviewed-receiver',
     ],
+    [
+      'shadowed String builtin name',
+      `(String: (value: string) => unknown) => String('/api');`,
+      'prototype-call:parameter',
+    ],
+    [
+      'shadowed JSON builtin receiver',
+      `(JSON: {parse(value: string): unknown}) => JSON.parse('/api');`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'shadowed Map constructor name',
+      `(Map: new () => unknown) => new Map();`,
+      'prototype-constructor:unreviewed',
+    ],
+    [
+      'asserted Map receiver type',
+      `(request: unknown) => (request as Map<string, string>).get('/api');`,
+      'prototype-call:asserted-receiver',
+    ],
+    [
+      'callable tagged-template parameter',
+      `(request: (value: TemplateStringsArray) => unknown) => request\`/api\`;`,
+      'prototype-call:tagged-template',
+    ],
+    [
+      'ambient function declaration',
+      `declare function request(path: string): unknown; request('/api');`,
+      'prototype-call:ambient-declaration',
+    ],
+    [
+      'shadowed Object builtin receiver',
+      `(Object: {values(value: unknown): unknown}) => Object.values('/api');`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'shadowed Math builtin receiver',
+      `(Math: {imul(left: number, right: number): number}) => Math.imul(1, 2);`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'shadowed reviewed constructors',
+      `(Error: new () => unknown, RegExp: new () => unknown, Set: new () => unknown) => [new Error(), new RegExp(), new Set()];`,
+      'prototype-constructor:unreviewed',
+    ],
+    [
+      'non-null structural parameter receiver',
+      `(request: {get(path: string): unknown} | null) => request!.get('/api');`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'asserted constructor expression',
+      `(request: unknown) => new (request as new () => unknown)();`,
+      'prototype-constructor:unreviewed',
+    ],
+    [
+      'asserted receiver alias',
+      `(request: unknown) => { const client = request as Map<string, string>; return client.get('/api'); };`,
+      'prototype-call:asserted-receiver',
+    ],
+    [
+      'ambient typed receiver alias',
+      `declare const client: Map<string, string>; client.get('/api');`,
+      'prototype-call:unreviewed-receiver',
+    ],
+    [
+      'locally shadowed Map receiver type',
+      `class Map { get(path: string) { return path; } } (client: Map) => client.get('/api');`,
+      'prototype-call:parameter-receiver',
+    ],
+    [
+      'optional callable parameter',
+      `(request?: (path: string) => unknown) => request?.('/api');`,
+      'prototype-call:parameter',
+    ],
+    [
+      'non-null callable parameter',
+      `(request: ((path: string) => unknown) | null) => request!('/api');`,
+      'prototype-call:dynamic-callee',
+    ],
+    [
+      'Function call method indirection',
+      `(request: (path: string) => unknown) => request.call(undefined, '/api');`,
+      'prototype-call:unreviewed-method:call',
+    ],
+    [
+      'Reflect apply indirection',
+      `(request: (path: string) => unknown) => Reflect.apply(request, undefined, ['/api']);`,
+      'prototype-call:unreviewed-method:apply',
+    ],
   ])('rejects %s through the closed dependency and call graph', (_name, source, rule) => {
     expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual(
       expect.arrayContaining([expect.objectContaining({rule})]),

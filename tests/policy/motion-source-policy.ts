@@ -230,6 +230,8 @@ function rootIdentifierNode(node: ts.Expression): ts.Identifier | null {
   let current = node;
   while (
     ts.isParenthesizedExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
     ts.isPropertyAccessExpression(current) ||
     ts.isElementAccessExpression(current)
   ) {
@@ -309,6 +311,52 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
     return null;
   };
 
+  const isStandardLibrarySymbol = (symbol: ts.Symbol | undefined): boolean => {
+    const declarations = symbol?.declarations;
+    return declarations !== undefined && declarations.length > 0 && declarations.every(
+      (declaration) => {
+        const declarationSource = declaration.getSourceFile();
+        return declarationSource !== sourceFile && declarationSource.isDeclarationFile;
+      },
+    );
+  };
+
+  const hasAssertedReceiver = (node: ts.Expression): boolean => {
+    if (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) return true;
+    if (
+      ts.isParenthesizedExpression(node) ||
+      ts.isNonNullExpression(node) ||
+      ts.isSatisfiesExpression(node) ||
+      ts.isPropertyAccessExpression(node) ||
+      ts.isElementAccessExpression(node)
+    ) {
+      return hasAssertedReceiver(node.expression);
+    }
+    return false;
+  };
+
+  const hasNonConstTypeAssertion = (node: ts.Node): boolean => {
+    let found = false;
+    const inspect = (current: ts.Node): void => {
+      if (found) return;
+      if (ts.isTypeAssertionExpression(current)) {
+        found = true;
+        return;
+      }
+      if (ts.isAsExpression(current)) {
+        if (current.type.getText(sourceFile) !== 'const') {
+          found = true;
+          return;
+        }
+        inspect(current.expression);
+        return;
+      }
+      ts.forEachChild(current, inspect);
+    };
+    inspect(node);
+    return found;
+  };
+
   const validateImport = (node: ts.ImportDeclaration): void => {
     const module = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : null;
     if (node.importClause === undefined) {
@@ -353,10 +401,10 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       report(node, `prototype-code-generation:${callee.text}`);
       return;
     }
-    if (APPROVED_DIRECT_CALLS.has(callee.text)) return;
 
     const symbol = checker.getSymbolAtLocation(callee);
     const declaration = symbol?.declarations?.[0];
+    if (APPROVED_DIRECT_CALLS.has(callee.text) && isStandardLibrarySymbol(symbol)) return;
     if (declaration === undefined) {
       report(node, 'prototype-call:unresolved');
       return;
@@ -365,7 +413,17 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       report(node, 'prototype-call:parameter');
       return;
     }
-    if (ts.isFunctionDeclaration(declaration)) return;
+    if (ts.isFunctionDeclaration(declaration)) {
+      if (
+        symbol?.declarations?.every(
+          (candidate) => ts.isFunctionDeclaration(candidate) && candidate.body !== undefined,
+        )
+      ) {
+        return;
+      }
+      report(node, 'prototype-call:ambient-declaration');
+      return;
+    }
     if (ts.isImportSpecifier(declaration)) {
       const module = importModuleForDeclaration(declaration);
       if (module !== null && APPROVED_PROTOTYPE_IMPORTS.has(module)) return;
@@ -396,14 +454,19 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
         return APPROVED_ARRAY_METHODS.has(method);
       }
       const typeName = type.aliasSymbol?.getName() ?? type.getSymbol()?.getName() ?? '';
-      if (typeName === 'RegExpMatchArray') return APPROVED_ARRAY_METHODS.has(method);
+      const typeSymbol = type.getSymbol();
+      if (typeName === 'RegExpMatchArray') {
+        return isStandardLibrarySymbol(typeSymbol) && APPROVED_ARRAY_METHODS.has(method);
+      }
       if (typeName === 'Map' || typeName === 'ReadonlyMap') {
-        return APPROVED_MAP_METHODS.has(method);
+        return isStandardLibrarySymbol(typeSymbol) && APPROVED_MAP_METHODS.has(method);
       }
       if (typeName === 'Set' || typeName === 'ReadonlySet') {
-        return APPROVED_SET_METHODS.has(method);
+        return isStandardLibrarySymbol(typeSymbol) && APPROVED_SET_METHODS.has(method);
       }
-      if (typeName === 'RegExp') return APPROVED_REGEXP_METHODS.has(method);
+      if (typeName === 'RegExp') {
+        return isStandardLibrarySymbol(typeSymbol) && APPROVED_REGEXP_METHODS.has(method);
+      }
       return false;
     };
     const type = checker.getTypeAtLocation(node);
@@ -442,14 +505,18 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       return;
     }
     const receiver = callee.expression;
-    const root = rootIdentifier(receiver);
-    if (root !== null) {
-      const builtinMethods = APPROVED_BUILTIN_METHODS.get(root);
-      if (builtinMethods?.has(method)) return;
+    if (hasAssertedReceiver(receiver)) {
+      report(node, 'prototype-call:asserted-receiver');
+      return;
     }
+    const root = rootIdentifier(receiver);
     const rootNode = rootIdentifierNode(receiver);
     const rootSymbol = rootNode === null ? undefined : checker.getSymbolAtLocation(rootNode);
     const rootDeclaration = rootSymbol?.declarations?.[0];
+    if (root !== null) {
+      const builtinMethods = APPROVED_BUILTIN_METHODS.get(root);
+      if (builtinMethods?.has(method) && isStandardLibrarySymbol(rootSymbol)) return;
+    }
     if (
       rootDeclaration !== undefined &&
       ts.isImportSpecifier(rootDeclaration) &&
@@ -458,6 +525,16 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       APPROVED_ARRAY_METHODS.has(method)
     ) {
       return;
+    }
+    if (rootDeclaration !== undefined && ts.isVariableDeclaration(rootDeclaration)) {
+      if (rootDeclaration.initializer === undefined) {
+        report(node, 'prototype-call:unreviewed-receiver');
+        return;
+      }
+      if (hasNonConstTypeAssertion(rootDeclaration.initializer)) {
+        report(node, 'prototype-call:asserted-receiver');
+        return;
+      }
     }
     if (isZodExpression(receiver) && APPROVED_ZOD_METHODS.has(method)) {
       return;
@@ -506,9 +583,11 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
       report(node, `prototype-code-generation:${constructor.text}`);
       return;
     }
-    if (!ts.isIdentifier(constructor) || !APPROVED_CONSTRUCTORS.has(constructor.text)) {
-      report(node, 'prototype-constructor:unreviewed');
+    if (ts.isIdentifier(constructor) && APPROVED_CONSTRUCTORS.has(constructor.text)) {
+      const symbol = checker.getSymbolAtLocation(constructor);
+      if (isStandardLibrarySymbol(symbol)) return;
     }
+    report(node, 'prototype-constructor:unreviewed');
   };
 
   const visit = (node: ts.Node): void => {
@@ -519,6 +598,7 @@ function prototypeAstViolations(source: string, fileName: string): MotionPolicyV
     }
     if (ts.isCallExpression(node)) validateCall(node);
     if (ts.isNewExpression(node)) validateConstructor(node);
+    if (ts.isTaggedTemplateExpression(node)) report(node, 'prototype-call:tagged-template');
     if (ts.isElementAccessExpression(node)) {
       const root = rootIdentifier(node.expression);
       if (root !== null && PROTOTYPE_COMPUTED_ROOTS.has(root)) {
