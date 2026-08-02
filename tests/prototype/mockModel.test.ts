@@ -62,4 +62,45 @@ describe('deterministic protected-text mock summarizer', () => {
       ),
     ).toThrow('RUN_FAILED');
   });
+
+  it.each([
+    '직원은 내부 조회 후 처리 결과를 안내하겠다고 설명했습니다.',
+    '직원은 지원 범위를 확인하겠다고 설명했습니다.',
+  ])('extracts the reviewed factual employee-guidance source span exactly: %s', (employeeGuidance) => {
+    const response = generateMockResponse(
+      `가상고객A님이 [합성_연락처_01]로 연락해 [합성_계좌_01] 처리 상태 확인을 요청했습니다. ${employeeGuidance}`,
+      'valid',
+    );
+
+    expect(JSON.parse(response.canonicalJson).employeeGuidance).toBe(employeeGuidance);
+  });
+
+  it.each([
+    '직원은 고객에게 특정 상품을 추천하겠다고 설명했습니다.',
+    '직원은 대출 승인을 확정했다고 설명했습니다.',
+    '직원은 대출 한도를 5천만원으로 결정했다고 설명했습니다.',
+    '직원은 적용 금리를 3%로 확정했다고 설명했습니다.',
+  ])('omits unapproved employee guidance from every emitted field: %s', (employeeSentence) => {
+    const response = generateMockResponse(
+      `가상고객A님이 [합성_연락처_01]로 연락해 [합성_계좌_01] 처리 상태 확인을 요청했습니다. ${employeeSentence}`,
+      'valid',
+    );
+    const summary = JSON.parse(response.canonicalJson) as Record<string, string>;
+
+    expect(summary.employeeGuidance).toBe('');
+    expect(Object.values(summary).join(' ')).not.toMatch(/추천|승인|한도|금리/u);
+  });
+
+  it('keeps source-derived fields incomplete for an unknown sentence shape', () => {
+    const response = generateMockResponse(
+      '가상고객A님과 [합성_연락처_01]의 상담 기록입니다. 직원은 임의 상품을 안내했습니다.',
+      'valid',
+    );
+    const summary = JSON.parse(response.canonicalJson) as Record<string, string>;
+
+    expect(summary.purpose).toBe('');
+    expect(summary.customerRequest).toBe('');
+    expect(summary.employeeGuidance).toBe('');
+    expect(Object.values(summary).join(' ')).not.toContain('임의 상품');
+  });
 });

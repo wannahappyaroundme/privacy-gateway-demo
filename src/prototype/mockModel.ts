@@ -16,6 +16,10 @@ export type MockModelResponse = Readonly<{
 const ACCOUNT_MARKER = /\[합성_계좌_[0-9]{2}\]/u;
 const RAW_SYNTHETIC_GRAMMAR = /가상고객-[A-Z]|합성(?:연락처|계좌|인증정보)-[0-9]{3}/u;
 const SUMMARY_SENTENCE = /^(?<customerRequest>.+? 요청했습니다\.) (?<employeeGuidance>직원은 .+? 설명했습니다\.)$/u;
+const REVIEWED_EMPLOYEE_GUIDANCE = new Set([
+  '직원은 내부 조회 후 처리 결과를 안내하겠다고 설명했습니다.',
+  '직원은 지원 범위를 확인하겠다고 설명했습니다.',
+]);
 
 function runFailed(reason: string): never {
   throw new Error(`RUN_FAILED: ${reason}`);
@@ -24,7 +28,8 @@ function runFailed(reason: string): never {
 function createSummary(protectedText: string): MockSummary {
   const match = SUMMARY_SENTENCE.exec(protectedText);
   const customerRequest = match?.groups?.customerRequest ?? '';
-  const employeeGuidance = match?.groups?.employeeGuidance ?? '';
+  const employeeGuidanceSource = match?.groups?.employeeGuidance ?? '';
+  const employeeGuidance = REVIEWED_EMPLOYEE_GUIDANCE.has(employeeGuidanceSource) ? employeeGuidanceSource : '';
   const purpose = customerRequest.match(/\] (?<purpose>.+) 요청했습니다\.$/u)?.groups?.purpose ?? '';
 
   return {
