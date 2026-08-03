@@ -1,16 +1,16 @@
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {execFileSync, spawnSync} from 'node:child_process';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join, resolve} from 'node:path';
 import {brotliDecompressSync} from 'node:zlib';
 
 import {describe, expect, it} from 'vitest';
 
 import {COPY, FORBIDDEN_RENDERED_COPY} from '@/content/copy';
-import {validateFixture} from '@/demo/schema';
+import {loadSyntheticCases} from '@/demo/schema';
 
-const copyPath = resolve('src/content/copy.ts');
-const fixturePath = resolve('src/demo/fixtures/synthetic-consultation-v1.json');
-const manifestPath = resolve('release-manifest.json');
+const casesPath = resolve('src/demo/fixtures/synthetic-cases-v2.json');
 const noticesPath = resolve('THIRD_PARTY_NOTICES.md');
 const regularFontPath = resolve('public/fonts/PrivacyDemoSans-Regular.woff2');
 const boldFontPath = resolve('public/fonts/PrivacyDemoSans-Bold.woff2');
@@ -191,40 +191,52 @@ function fontCodePoints(fontPath: string): Set<number> {
   return codePoints;
 }
 
-function fontNames(fontPath: string): string[] {
+type FontNameRecord = Readonly<{nameId: number; value: string}>;
+
+function fontNameRecords(fontPath: string): FontNameRecord[] {
   const table = readWoff2Tables(fontPath).get('name');
   if (!table) throw new Error('WOFF2 name table is missing');
   const count = table.readUInt16BE(2);
   const stringsOffset = table.readUInt16BE(4);
-  const names: string[] = [];
+  const records: FontNameRecord[] = [];
   for (let index = 0; index < count; index += 1) {
     const recordOffset = 6 + index * 12;
     const platform = table.readUInt16BE(recordOffset);
+    const nameId = table.readUInt16BE(recordOffset + 6);
     const length = table.readUInt16BE(recordOffset + 8);
     const offset = table.readUInt16BE(recordOffset + 10);
     const value = table.subarray(stringsOffset + offset, stringsOffset + offset + length);
-    if (platform === 3) {
+    if (platform === 0 || platform === 3) {
       const swapped = Buffer.alloc(value.length);
       for (let byte = 0; byte < value.length; byte += 2) {
         swapped[byte] = value[byte + 1];
         swapped[byte + 1] = value[byte];
       }
-      names.push(swapped.toString('utf16le'));
+      records.push({nameId, value: swapped.toString('utf16le')});
     } else if (platform === 1) {
-      names.push(value.toString('ascii'));
+      records.push({nameId, value: value.toString('ascii')});
     }
   }
-  return names;
+  if (records.length !== count) throw new Error('WOFF2 name table has an unsupported platform');
+  return records;
+}
+
+function fontWeight(fontPath: string): number {
+  const table = readWoff2Tables(fontPath).get('OS/2');
+  if (!table) throw new Error('WOFF2 OS/2 table is missing');
+  return table.readUInt16BE(4);
 }
 
 describe('rendered copy contract', () => {
   it('uses product-workspace copy without the retired validation-plan story', () => {
     const rendered = collectStrings(COPY).join('\n');
 
-    expect(rendered).toContain('AI 상담 요약 만들기');
-    expect(rendered).toContain('AI가 상담 요약을 작성하고 있어요');
-    expect(rendered).toContain('상담 요약이 준비되었습니다');
-    expect(rendered).toContain('제품 콘셉트 데모 | 합성 예시 데이터');
+    expect(rendered).toContain('개인정보 보호 후 요약 만들기');
+    expect(rendered).toContain('로컬 모의 요약');
+    expect(rendered).toContain('브라우저 내부 실행');
+    expect(rendered).toContain('전체 검사 완료');
+    expect(rendered).toContain('확인된 결과만 업무 화면에 표시했습니다.');
+    expect(rendered).toContain('합성데이터 전용 브라우저 프로토타입 | 로컬 모의 요약 | 서버·외부 AI 없음');
 
     for (const removed of [
       '현업 대표 5명',
@@ -233,19 +245,59 @@ describe('rendered copy contract', () => {
       '검증 예정',
       '미실시',
       '30초 시연',
+      'AI 상담 요약 작성',
+      '승인된 AI 업무 경로',
     ]) {
       expect(rendered, `retired demo copy: ${removed}`).not.toContain(removed);
     }
   });
 
-  it('keeps reviewed product, scope, and five result fields exact', async () => {
-    const fixture = await validateFixture(readFileSync(fixturePath, 'utf8'));
+  it('keeps request-blocked, response-withheld, and recovery copy exact', () => {
+    const rendered = collectStrings(COPY).join('\n');
 
+    for (const exact of [
+      '이 합성 사례는 요약 요청 전에 멈췄어요',
+      '지원하지 않는 고위험 정보 유형을 확인해 모의 요약 단계로 보내지 않았습니다.',
+      '보호용 표시를 확인하기 어려워 결과를 열지 않았어요',
+      '정상 합성 사례 보기',
+      '다른 합성 사례 실행',
+      '같은 사례 다시 실행',
+    ]) {
+      expect(rendered).toContain(exact);
+    }
+  });
+
+  it('keeps functional prototype surface copy inside the linted COPY tree', () => {
+    const rendered = collectStrings(COPY).join('\n');
+
+    for (const surfaceCopy of [
+      '합성 사례 선택',
+      '실제 고객정보 아님',
+      '개인정보 보호 흐름',
+      '보호문 비교',
+      '5개 결과 검사',
+      '내용 없는 실행 근거',
+      '상담 요약',
+      '확인된 상담 요약 5개 항목',
+      '다시 실행할 수 있어요',
+      '브라우저 내부에서 처리 중',
+    ]) {
+      expect(rendered, `copy-lint input is missing: ${surfaceCopy}`).toContain(surfaceCopy);
+    }
+  });
+
+  it('keeps reviewed product, scope, and five result labels exact', () => {
     expect(COPY.product.name).toBe('단디 DANDI');
     expect(COPY.product.category).toBe('금융 AI 개인정보 보호 게이트웨이');
     expect(COPY.product.memoryLine).toBe('허용된 업무만, 확인된 결과만');
-    expect(COPY.verifiedResult).toEqual(fixture.verifiedResult);
-    expect(COPY.scope.official).toBe('제품 콘셉트 데모 | 합성 예시 데이터');
+    expect(COPY.verifiedResult.map(({label}) => label)).toEqual([
+      '상담 목적',
+      '고객 요청',
+      '직원이 안내한 내용',
+      '직원이 확인할 항목',
+      '다음 조치',
+    ]);
+    expect(COPY.scope.official).toBe('합성데이터 전용 브라우저 프로토타입 | 로컬 모의 요약 | 서버·외부 AI 없음');
     expect(COPY.scope.detail).toContain('실제 고객정보와 금융 시스템에는 연결되지 않습니다');
   });
 
@@ -255,10 +307,17 @@ describe('rendered copy contract', () => {
       .replace('<!-- BEGIN GENERATED NPM DEPENDENCIES -->', '')
       .replace('<!-- END GENERATED NPM DEPENDENCIES -->', '');
 
-    expect(notices).toContain('- Source download date: `2026-07-18`');
+    expect(notices).toContain('- Source family: `Noto Sans KR`');
     expect(notices).toContain(
-      '- Source URL: `https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/17_NotoSansKR.zip`',
+      '- Source URL: `https://github.com/google/fonts/tree/main/ofl/notosanskr`',
     );
+    expect(notices).toContain(
+      '- Source variable TTF SHA-256: `194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252`',
+    );
+    expect(notices).toContain(
+      '- OFL text SHA-256: `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9`',
+    );
+    expect(notices).toContain('src/demo/fixtures/synthetic-cases-v2.json');
     expect(noticesWithoutGeneratedMarkers).not.toMatch(/<[^>\n]+>/u);
     expect(notices).not.toMatch(/\/private\/tmp\/[^\s`]+\.py/u);
 
@@ -270,10 +329,9 @@ describe('rendered copy contract', () => {
       expect(notices).toContain(`\`${relativePath}\`: \`${helperHash}\``);
     }
 
-    for (const weight of ['Regular', 'Bold']) {
-      expect(notices).toContain(`/tmp/privacy-demo-font-build/NotoSansKR-${weight}.otf`);
-      expect(notices).toContain(`public/fonts/PrivacyDemoSans-${weight}.woff2`);
-    }
+    expect(notices).toContain('/tmp/NotoSansKR-wght.ttf');
+    expect(notices).toContain('public/fonts/PrivacyDemoSans-Regular.woff2');
+    expect(notices).toContain('public/fonts/PrivacyDemoSans-Bold.woff2');
   });
 
   it('contains no forbidden rendered claim, brand, or em dash', () => {
@@ -290,9 +348,9 @@ describe('rendered copy contract', () => {
     expect(rendered).not.toMatch(/\b\d{2,4}-\d{2,6}-\d{2,6}\b/u);
   });
 
-  it('keeps every rendered glyph in both licensed font subsets', () => {
-    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as unknown;
-    const rendered = collectStrings(COPY).concat(collectStrings(fixture)).join('');
+  it('contains every glyph rendered by COPY and all reviewed v2 cases in both licensed subsets', () => {
+    const cases = loadSyntheticCases(readFileSync(casesPath, 'utf8'));
+    const rendered = collectStrings(COPY).concat(collectStrings(cases)).join('');
     const required = new Set(
       Array.from(rendered, (character) => character.codePointAt(0)!).filter(
         (codePoint) => !/\s/u.test(String.fromCodePoint(codePoint)),
@@ -306,20 +364,73 @@ describe('rendered copy contract', () => {
     }
   });
 
-  it('uses the modified family name in both font subsets', () => {
-    for (const fontPath of [regularFontPath, boldFontPath]) {
-      const names = fontNames(fontPath);
-      expect(names).toContain('Privacy Demo Sans');
-      expect(names).not.toContain('Noto Sans KR');
+  it('collects double-quoted copy and rejects template literals instead of silently omitting glyphs', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'privacy-demo-glyph-test-'));
+    const copyPath = join(directory, 'copy.ts');
+    const fixturePath = join(directory, 'fixture.json');
+    const outputPath = join(directory, 'glyphs.txt');
+
+    try {
+      writeFileSync(
+        copyPath,
+        `export const COPY = {single: '가', double: "나"};\nexport const FORBIDDEN_RENDERED_COPY = [];\n`,
+      );
+      writeFileSync(fixturePath, '{"cases":[]}');
+      execFileSync('python3', [glyphHelperPath, copyPath, fixturePath, outputPath]);
+      expect(readFileSync(outputPath, 'utf8')).toContain('가');
+      expect(readFileSync(outputPath, 'utf8')).toContain('나');
+
+      writeFileSync(
+        copyPath,
+        "export const COPY = {template: `다`};\nexport const FORBIDDEN_RENDERED_COPY = [];\n",
+      );
+      const templateResult = spawnSync(
+        'python3',
+        [glyphHelperPath, copyPath, fixturePath, outputPath],
+        {encoding: 'utf8'},
+      );
+      expect(templateResult.status).not.toBe(0);
+      expect(templateResult.stderr).toContain('template literals are not supported');
+    } finally {
+      rmSync(directory, {recursive: true, force: true});
     }
   });
 
-  it('records exact copy bytes and font output hashes', () => {
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {copySha256: string};
-    const notices = readFileSync(noticesPath, 'utf8');
-    const copyHash = createHash('sha256').update(readFileSync(copyPath)).digest('hex');
+  it('uses static 400 and 700 OFL subsets under the unreserved modified family name', () => {
+    const familyNameIds = new Set([1, 2, 3, 4, 6, 16, 17, 21, 22, 25]);
+    const acknowledgementNameIds = new Set([0, 13, 14]);
 
-    expect(manifest.copySha256).toBe(copyHash);
+    for (const [fontPath, weight] of [
+      [regularFontPath, 400],
+      [boldFontPath, 700],
+    ] as const) {
+      const tables = readWoff2Tables(fontPath);
+      const records = fontNameRecords(fontPath);
+      const names = records.map(({value}) => value);
+      expect(names).toContain('Privacy Demo Sans');
+      expect(names.some((name) => name.includes('2014-2021 Adobe'))).toBe(true);
+      expect(names.some((name) => name.includes('SIL Open Font License'))).toBe(true);
+      expect(names.some((name) => name.includes("Reserved Font Name 'Source'"))).toBe(true);
+      for (const {nameId, value} of records) {
+        if (/Noto(?:\s*Sans\s*KR|SansKR)?/iu.test(value)) {
+          expect(acknowledgementNameIds.has(nameId), `name ID ${nameId}: ${value}`).toBe(true);
+        }
+        if (familyNameIds.has(nameId)) {
+          expect(value, `family-related name ID ${nameId}`).not.toMatch(/Noto/iu);
+        }
+      }
+      const variationPrefixes = records
+        .filter(({nameId}) => nameId === 25)
+        .map(({value}) => value);
+      expect(variationPrefixes.length).toBeGreaterThan(0);
+      expect(new Set(variationPrefixes)).toEqual(new Set(['PrivacyDemoSans']));
+      expect(fontWeight(fontPath)).toBe(weight);
+      expect([...tables.keys()]).not.toEqual(expect.arrayContaining(['fvar', 'gvar', 'avar']));
+    }
+  });
+
+  it('records exact font output hashes', () => {
+    const notices = readFileSync(noticesPath, 'utf8');
     for (const [fileName, fontPath] of [
       ['PrivacyDemoSans-Regular.woff2', regularFontPath],
       ['PrivacyDemoSans-Bold.woff2', boldFontPath],

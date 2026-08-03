@@ -1,261 +1,304 @@
 import type {DemoRuntimeView} from '../app/DemoRuntime';
 import {COPY} from '../content/copy';
+import type {RunSnapshot, RunStage} from '../prototype/run';
+import {detectSyntheticIdentifiers, protectedTextForDisplay} from '../prototype/protect';
 import {BlockedResultPanel} from './BlockedResultPanel';
+import {EntityProtectionPanel} from './EntityProtectionPanel';
+import {EvidenceStatusTable} from './EvidenceStatusTable';
+import {InspectionDashboard} from './InspectionDashboard';
+import {SyntheticCaseCard} from './SyntheticCaseCard';
+import {VerifiedResultPanel} from './VerifiedResultPanel';
 
 type ProductState =
   | 'idle'
   | 'detecting'
   | 'protecting'
-  | 'generating'
+  | 'summarizing'
   | 'inspecting'
-  | 'complete'
-  | 'withheld';
+  | 'verified'
+  | 'request-blocked'
+  | 'response-withheld'
+  | 'recoverable';
 
-const FLOW_STEPS = [
-  ['detecting', '개인정보 찾기'],
-  ['protecting', '유형별 보호'],
-  ['generating', 'AI 상담 요약 작성'],
-  ['inspecting', '전체 응답 검사'],
-] as const;
+const STAGE_INDEX: Readonly<Record<RunStage, number>> = {
+  idle: -1,
+  detected: 0,
+  protected: 1,
+  mocked: 2,
+  inspected: 3,
+  published: 4,
+};
+
+const STAGE_STATUS = COPY.functionalPrototype.gateway.states;
 
 function productState(view: DemoRuntimeView): ProductState {
-  const frame = view.timeline?.frame ?? 0;
-  if (view.timeline?.result?.kind === 'withheld') return 'withheld';
-  if (view.runtime.phase === 'idle') return 'idle';
-  if (view.runtime.phase === 'complete' || frame >= 690) return 'complete';
-  if (frame < 180) return 'detecting';
-  if (frame < 420) return 'protecting';
-  if (frame < 540) return 'generating';
-  return 'inspecting';
+  if (view.runtime.phase === 'idle' || view.timeline === null) return 'idle';
+  const {run} = view.timeline;
+  if (run.outcome === 'REQUEST_BLOCKED_UNSUPPORTED') return 'request-blocked';
+  if (run.outcome.startsWith('RESPONSE_WITHHELD_')) return 'response-withheld';
+  if (run.outcome === 'RUN_FAILED') return 'recoverable';
+  if (run.outcome === 'VERIFIED' && run.verifiedFields !== null) return 'verified';
+  if (run.reachedStage === 'protected') return 'protecting';
+  if (run.reachedStage === 'mocked') return 'summarizing';
+  if (run.reachedStage === 'inspected' || run.reachedStage === 'published') return 'inspecting';
+  return 'detecting';
 }
 
-function stateIndex(state: ProductState): number {
-  return FLOW_STEPS.findIndex(([key]) => key === state);
+function stageStatus(index: number, state: ProductState, reachedStage: RunStage): string {
+  const reached = STAGE_INDEX[reachedStage];
+  if (state === 'verified') return STAGE_STATUS.complete;
+  if (state === 'request-blocked') {
+    if (index < 1) return STAGE_STATUS.complete;
+    if (index === 1) return STAGE_STATUS.stopped;
+    return index === 4 ? STAGE_STATUS.locked : STAGE_STATUS.skipped;
+  }
+  if (state === 'response-withheld') {
+    if (index < 3) return STAGE_STATUS.complete;
+    if (index === 3) return STAGE_STATUS.needsReview;
+    return STAGE_STATUS.locked;
+  }
+  if (state === 'recoverable') {
+    return index <= reached
+      ? STAGE_STATUS.needsReview
+      : index === 4
+        ? STAGE_STATUS.locked
+        : STAGE_STATUS.waiting;
+  }
+  if (state === 'idle') return index === 4 ? STAGE_STATUS.locked : STAGE_STATUS.waiting;
+  if (index < reached) return STAGE_STATUS.complete;
+  if (index === reached) return index === 4 ? STAGE_STATUS.complete : STAGE_STATUS.inProgress;
+  return index === 4 ? STAGE_STATUS.locked : STAGE_STATUS.waiting;
 }
 
-function progressBetween(frame: number, start: number, end: number): number {
-  if (frame <= start) return 0;
-  if (frame >= end) return 1;
-  return (frame - start) / (end - start);
-}
-
-function ConsultationPanel({view, state}: {view: DemoRuntimeView; state: ProductState}) {
-  if (view.bootstrap.kind !== 'ready' || view.timeline === null) return null;
-  const frame = view.timeline.frame;
-  const found = state === 'idle' ? 0 : Math.min(3, Math.ceil(progressBetween(frame, 0, 180) * 3));
-  const canAdvanceManually = !view.recordingMode &&
-    (view.runtime.phase === 'paused' || view.runtime.phase === 'manual');
-  const isBusy = state !== 'idle' && !canAdvanceManually;
-
-  const handlePrimary = () => {
-    if (view.runtime.phase === 'idle') view.actions.start();
-    else if (view.runtime.phase === 'paused') view.actions.resume();
-    else if (view.runtime.phase === 'manual') view.actions.next();
-    else if (view.runtime.phase === 'complete') view.actions.replay();
-  };
-
-  const buttonLabel = state === 'idle'
-    ? COPY.workspace.start
-    : state === 'complete' || state === 'withheld'
-      ? '처리 완료'
-      : view.runtime.phase === 'paused'
-      ? '계속 진행'
-      : view.runtime.phase === 'manual' && !view.recordingMode
-        ? '다음 상태'
-        : '단디가 처리하고 있어요';
-
-  return (
-    <article className="product-panel consultation-workspace" aria-labelledby="consultation-title">
-      <div className="product-panel__heading">
-        <div>
-          <p className="panel__eyebrow">은행 상담 업무</p>
-          <h2 id="consultation-title">고객 상담 메모</h2>
-        </div>
-        <span className="case-id">{view.bootstrap.fixture.case.caseId}</span>
-      </div>
-
-      <div className="consultation-document">
-        <div className="document-toolbar">
-          <span>상담 기록</span>
-          <strong>저장됨</strong>
-        </div>
-        <p>{view.bootstrap.fixture.case.sourceText}</p>
-        <div className="detected-entities" aria-label="개인정보 유형">
-          {['이름', '연락처', '계좌정보'].map((label, index) => (
-            <span key={label} className={found > index ? 'is-found' : ''}>
-              <b aria-hidden="true">{found > index ? '✓' : '·'}</b>{label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="workspace-intent">
-        <span aria-hidden="true">AI</span>
-        <div><strong>상담 요약</strong><p>상담 목적과 다음 조치를 업무 양식으로 정리합니다.</p></div>
-      </div>
-
-      <button
-        type="button"
-        className="button-primary workspace-primary"
-        disabled={isBusy}
-        onClick={handlePrimary}
-      >
-        {buttonLabel}<span aria-hidden="true">→</span>
-      </button>
-    </article>
-  );
-}
-
-function GatewayActivity({view, state}: {view: DemoRuntimeView; state: ProductState}) {
-  const frame = view.timeline?.frame ?? 0;
-  const currentIndex = stateIndex(state);
+function GatewayActivity({state, run, protectedText}: {state: ProductState; run: RunSnapshot | null; protectedText?: string}) {
+  const reachedStage = run?.reachedStage ?? 'idle';
+  const protectionVisible = STAGE_INDEX[reachedStage] >= 1;
   const status = state === 'idle'
-    ? 'AI 상담 요약을 요청하면 단디가 보호 흐름을 시작합니다'
+    ? COPY.functionalPrototype.gateway.idleMessage
     : state === 'detecting'
       ? COPY.workspace.detecting
       : state === 'protecting'
         ? COPY.workspace.protecting
-        : state === 'generating'
+        : state === 'summarizing'
           ? COPY.workspace.generating
           : state === 'inspecting'
             ? COPY.workspace.inspecting
-            : state === 'complete'
+            : state === 'verified'
               ? COPY.workspace.complete
-              : '결과를 다시 확인하고 있어요';
+              : state === 'request-blocked'
+                ? COPY.functionalPrototype.gateway.requestBlockedMessage
+                : state === 'response-withheld'
+                  ? COPY.functionalPrototype.gateway.responseWithheldMessage
+                  : COPY.workspace.recoverableTitle;
 
   return (
     <section className="product-panel gateway-workspace" aria-labelledby="gateway-title">
       <div className="product-panel__heading">
         <div>
-          <p className="panel__eyebrow">단디 보호 처리</p>
-          <h2 id="gateway-title">AI 업무 보호 경로</h2>
+          <p className="panel__eyebrow">{COPY.functionalPrototype.gateway.eyebrow}</p>
+          <h2 id="gateway-title">{COPY.functionalPrototype.gateway.title}</h2>
         </div>
         <span className={state === 'idle' ? 'gateway-state' : 'gateway-state is-active'}>
-          {state === 'idle' ? '대기' : state === 'complete' ? '처리 완료' : '처리 중'}
+          {state === 'idle'
+            ? STAGE_STATUS.waiting
+            : state === 'verified'
+              ? STAGE_STATUS.complete
+              : state === 'request-blocked' || state === 'response-withheld'
+                ? STAGE_STATUS.stopped
+                : STAGE_STATUS.running}
         </span>
-      </div>
-
-      <div className="gateway-core" aria-hidden="true">
-        <span className="gateway-orbit gateway-orbit--outer" />
-        <span className="gateway-orbit gateway-orbit--inner" />
-        <span className="gateway-pulse" />
-        <svg viewBox="0 0 64 64">
-          <path d="M32 5 53 14v16c0 14-8.8 23.6-21 29C19.8 53.6 11 44 11 30V14z" />
-          <path d="m22 32 7 7 14-17" />
-        </svg>
       </div>
 
       <p className="gateway-message" aria-live="polite">{status}</p>
 
-      <ol className="gateway-steps">
-        {FLOW_STEPS.map(([key, label], index) => {
-          const complete = state === 'complete' || state === 'withheld' || index < currentIndex;
-          const active = key === state;
+      <ol className="gateway-steps" data-testid="stage-list">
+        {COPY.stageNames.map((label, index) => {
+          const itemStatus = stageStatus(index, state, reachedStage);
+          const complete = itemStatus === STAGE_STATUS.complete;
+          const active = itemStatus === STAGE_STATUS.inProgress;
+          const warning = itemStatus === STAGE_STATUS.stopped || itemStatus === STAGE_STATUS.needsReview;
           return (
-            <li key={key} className={complete ? 'is-complete' : active ? 'is-active' : ''}>
-              <span aria-hidden="true">{complete ? '✓' : active ? '●' : '·'}</span>
+            <li key={label} className={complete ? 'is-complete' : active ? 'is-active' : warning ? 'is-warning' : undefined}>
+              <span aria-hidden="true">{complete ? '✓' : warning ? '!' : index + 1}</span>
               <strong>{label}</strong>
-              <small>{complete ? '완료' : active ? '진행 중' : '대기'}</small>
+              <small>{itemStatus}</small>
             </li>
           );
         })}
       </ol>
 
-      <div className="ai-route" data-testid="ai-activity" data-ai-state={state === 'generating' ? 'writing' : 'waiting'}>
-        <span className="ai-route__mark" aria-hidden="true">AI</span>
-        <div><strong>승인된 AI 업무 경로</strong><p>보호된 요청으로 상담 요약을 작성합니다.</p></div>
-        <span className="ai-writing-dots" aria-hidden="true"><i /><i /><i /></span>
-      </div>
-
-      <progress max={899} value={Math.min(frame, 899)} aria-label="단디 보호 처리 진행률" />
+      <EntityProtectionPanel
+        protectedText={protectedText}
+        visible={protectionVisible}
+        requestBlocked={state === 'request-blocked'}
+      />
+      {run !== null && <InspectionDashboard checks={run.checks} />}
+      <EvidenceStatusTable />
     </section>
   );
 }
 
-function ResultWorkspace({view, state}: {view: DemoRuntimeView; state: ProductState}) {
-  if (view.bootstrap.kind !== 'ready' || view.timeline === null) return null;
-  const result = view.timeline.result;
-
-  if (result?.kind === 'withheld') {
-    return (
-      <section className="product-panel result-workspace result-workspace--withheld">
-        <BlockedResultPanel
-          reason={result.reason}
-          marker={view.bootstrap.fixture.blockReason.mutatedMarker}
-          helpExpanded={result.helpExpanded}
-          onPrevious={() => view.actions.goTo(610)}
-          onHelp={() => view.actions.goTo(975)}
-          onSuccess={() => view.actions.goTo(750)}
-        />
-      </section>
-    );
-  }
-
-  const showResult = state === 'complete' && result?.kind === 'verified';
-  const writing = state === 'generating';
-  const inspecting = state === 'inspecting';
+function ResultWorkspace({
+  state,
+  run,
+  onNormal,
+  onAnother,
+  onRetry,
+}: {
+  state: ProductState;
+  run: RunSnapshot | null;
+  onNormal(): void;
+  onAnother(): void;
+  onRetry(): void;
+}) {
+  const fields = run?.verifiedFields;
+  const verifiedFields = fields === null || fields === undefined ? null : [
+    {
+      label: COPY.verifiedResult[0].label,
+      value: fields.purpose,
+      evidence: COPY.functionalPrototype.result.evidence.syntheticMemo,
+    },
+    {
+      label: COPY.verifiedResult[1].label,
+      value: fields.customerRequest,
+      evidence: COPY.functionalPrototype.result.evidence.syntheticMemo,
+    },
+    {
+      label: COPY.verifiedResult[2].label,
+      value: fields.employeeGuidance,
+      evidence: COPY.functionalPrototype.result.evidence.inputSource,
+    },
+    {
+      label: COPY.verifiedResult[3].label,
+      value: fields.itemsToConfirm,
+      evidence: COPY.functionalPrototype.result.evidence.humanReview,
+    },
+    {
+      label: COPY.verifiedResult[4].label,
+      value: fields.nextAction,
+      evidence: COPY.functionalPrototype.result.evidence.nextAction,
+    },
+  ];
 
   return (
     <article className="product-panel result-workspace" aria-labelledby="result-title">
       <div className="product-panel__heading">
         <div>
-          <p className="panel__eyebrow">AI 업무 결과</p>
-          <h2 id="result-title">상담 요약</h2>
+          <p className="panel__eyebrow">{COPY.functionalPrototype.result.eyebrow}</p>
+          <h2 id="result-title">{COPY.functionalPrototype.result.title}</h2>
         </div>
-        <span className={showResult ? 'result-state is-ready' : 'result-state'}>
-          {showResult ? COPY.workspace.pass : writing ? '작성 중' : inspecting ? '응답 검사 중' : '결과 대기'}
+        <span className={state === 'verified' ? 'result-state is-ready' : 'result-state'}>
+          {state === 'verified'
+            ? COPY.functionalPrototype.result.states.verified
+            : state === 'request-blocked'
+              ? COPY.functionalPrototype.result.states.requestStopped
+              : state === 'response-withheld'
+                ? COPY.functionalPrototype.result.states.withheld
+                : COPY.functionalPrototype.result.states.locked}
         </span>
       </div>
 
-      {showResult ? (
-        <div className="product-result" data-testid="verified-result">
-          <div className="product-result__success"><span aria-hidden="true">✓</span><div><strong>{COPY.workspace.complete}</strong><p>{COPY.workspace.completeDescription}</p></div></div>
-          <dl>
-            {result.fields.map((field) => (
-              <div key={field.label} className={field.label === '직원이 확인할 항목' ? 'needs-review' : ''}>
-                <dt>{field.label}</dt><dd>{field.value}</dd><dd className="result-evidence">{field.evidence}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="result-actions">
-            <button type="button" className="button-primary" onClick={view.actions.replay}>{COPY.workspace.reset}</button>
-            <button type="button" onClick={() => view.actions.goTo(945)}>{COPY.workspace.withheld}</button>
-          </div>
-        </div>
+      {state === 'verified' && verifiedFields !== null ? (
+        <VerifiedResultPanel fields={verifiedFields} onRetry={onRetry} onAnother={onAnother} />
+      ) : state === 'request-blocked' ? (
+        <BlockedResultPanel kind="request" onNormal={onNormal} onAnother={onAnother} onRetry={onRetry} />
+      ) : state === 'response-withheld' ? (
+        <BlockedResultPanel kind="response" onNormal={onNormal} onAnother={onAnother} onRetry={onRetry} />
+      ) : state === 'recoverable' ? (
+        <BlockedResultPanel kind="recoverable" onNormal={onNormal} onAnother={onAnother} onRetry={onRetry} />
       ) : (
-        <div className={writing ? 'result-preview is-writing' : inspecting ? 'result-preview is-inspecting' : 'result-preview'}>
-          <div className="result-placeholder-icon" aria-hidden="true">AI</div>
-          <strong>{writing ? COPY.workspace.generating : inspecting ? COPY.workspace.inspecting : 'AI 상담 요약이 여기에 표시됩니다'}</strong>
-          <p>{inspecting ? '검사가 끝날 때까지 결과를 업무 화면에 표시하지 않습니다.' : '요청을 시작하면 상담 목적과 다음 조치를 정리합니다.'}</p>
-          <div className="result-skeleton" aria-hidden="true"><i /><i /><i /><i /></div>
-          {inspecting && <span className="inspection-scan" aria-hidden="true" />}
+        <div className={`locked-result locked-result--${state}`} data-testid="locked-result">
+          <div className="locked-result__icon" aria-hidden="true">
+            {state === 'idle'
+              ? COPY.functionalPrototype.result.lockedIcon
+              : COPY.functionalPrototype.result.checkingIcon}
+          </div>
+          <strong>
+            {state === 'idle'
+              ? COPY.workspace.lockedTitle
+              : COPY.functionalPrototype.result.checkingTitle}
+          </strong>
+          <p>{COPY.workspace.lockedDescription}</p>
+          {state !== 'idle' && <div className="result-skeleton" aria-hidden="true"><i /><i /><i /><i /></div>}
         </div>
       )}
     </article>
   );
 }
 
-export function ProductWorkspace({view}: {view: DemoRuntimeView}) {
+type ProductWorkspaceProps = {
+  view: DemoRuntimeView;
+  manualOnly: boolean;
+  onCaseChange(caseId: string): void;
+};
+
+export function ProductWorkspace({view, manualOnly, onCaseChange}: ProductWorkspaceProps) {
+  const bootstrap = view.bootstrap;
+  if (bootstrap.kind !== 'ready') return null;
+  const selectedCase = bootstrap.cases.find(({caseId}) => caseId === bootstrap.selectedCaseId);
+  if (!selectedCase) return null;
+
   const state = productState(view);
+  const run = view.timeline?.run ?? null;
+  const detections = detectSyntheticIdentifiers(selectedCase.sourceText);
+  const protectionVisible = run !== null && STAGE_INDEX[run.reachedStage] >= 1;
+  const protectedText = protectedTextForDisplay(selectedCase.sourceText, protectionVisible);
+  const manual = !view.recordingMode && manualOnly;
+  const manualStep = manual ? Math.max(1, STAGE_INDEX[run?.reachedStage ?? 'detected'] + 1) : null;
+  const terminal = ['verified', 'request-blocked', 'response-withheld', 'recoverable'].includes(state);
+  const nextCase = () => {
+    const currentIndex = bootstrap.cases.findIndex(({caseId}) => caseId === selectedCase.caseId);
+    const next = bootstrap.cases[(currentIndex + 1) % bootstrap.cases.length];
+    if (next) onCaseChange(next.caseId);
+  };
+  const normalCase = () => onCaseChange(bootstrap.cases[0]!.caseId);
+  const primaryAction = () => {
+    if (terminal) return;
+    if (view.runtime.phase === 'manual') view.actions.next();
+    else if (view.runtime.phase === 'idle') view.actions.start();
+  };
+  const actionLabel = terminal
+    ? COPY.functionalPrototype.workspace.actionComplete
+    : manual
+      ? COPY.functionalPrototype.workspace.actionNext
+      : state === 'idle'
+        ? COPY.workspace.start
+        : COPY.functionalPrototype.workspace.actionBusy;
 
   return (
     <section
       className="product-workspace"
       data-testid="product-workspace"
       data-product-state={state}
+      data-case-id={selectedCase.caseId}
+      data-run-outcome={run?.outcome ?? 'IDLE'}
+      data-model-call-count={run?.modelCallCount ?? 0}
     >
       <header className="workspace-heading">
         <div>
-          <p className="panel__eyebrow">상담 요약</p>
+          <p className="panel__eyebrow">{COPY.functionalPrototype.workspace.eyebrow}</p>
           <h1>{COPY.workspace.title}</h1>
           <p>{COPY.workspace.description}</p>
         </div>
-        <span className="workspace-profile"><b aria-hidden="true">상</b> 상담업무 담당자</span>
+        <span className="workspace-profile">
+          <b aria-hidden="true">{COPY.functionalPrototype.workspace.profileInitial}</b>
+          {COPY.functionalPrototype.workspace.profile}
+        </span>
       </header>
       <div className="product-workspace__grid">
-        <ConsultationPanel view={view} state={state} />
-        <GatewayActivity view={view} state={state} />
-        <ResultWorkspace view={view} state={state} />
+        <SyntheticCaseCard
+          cases={bootstrap.cases}
+          selectedCase={selectedCase}
+          detections={detections}
+          highlightsVisible={state !== 'idle'}
+          actionLabel={actionLabel}
+          actionDisabled={terminal || (!manual && state !== 'idle')}
+          manualStep={manualStep}
+          onCaseChange={onCaseChange}
+          onAction={primaryAction}
+        />
+        <GatewayActivity state={state} run={run} protectedText={protectedText} />
+        <ResultWorkspace state={state} run={run} onNormal={normalCase} onAnother={nextCase} onRetry={view.actions.replay} />
       </div>
     </section>
   );

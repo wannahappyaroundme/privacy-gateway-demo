@@ -1,93 +1,123 @@
+import type {ReactNode} from 'react';
+
+import type {SyntheticCase} from '../prototype/contracts';
+import type {SyntheticDetection} from '../prototype/protect';
 import {COPY} from '../content/copy';
 
 type SyntheticCaseCardProps = {
-  caseId: string;
-  sourceText: string;
-  protectedText: string;
-  scene: string;
-  summarySelected: boolean;
-  detectionProgress: number;
-  stageScrollY: number;
-  onSummarize(): void;
+  cases: readonly SyntheticCase[];
+  selectedCase: SyntheticCase;
+  detections: readonly SyntheticDetection[];
+  highlightsVisible: boolean;
+  actionLabel: string;
+  actionDisabled: boolean;
+  manualStep: number | null;
+  onCaseChange(caseId: string): void;
+  onAction(): void;
 };
 
-const ENTITY_LABELS = [
-  {type: '이름', value: '가상고객-A'},
-  {type: '연락처', value: '합성연락처-001'},
-  {type: '계좌', value: '합성계좌-001'},
-] as const;
+const TYPE_LABELS = COPY.functionalPrototype.case.typeLabels;
+
+function HighlightedSource({
+  sourceText,
+  detections,
+  visible,
+}: {
+  sourceText: string;
+  detections: readonly SyntheticDetection[];
+  visible: boolean;
+}) {
+  if (!visible) return <>{sourceText}</>;
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  for (const detection of detections) {
+    parts.push(sourceText.slice(cursor, detection.start));
+    parts.push(
+      <mark key={`${detection.type}-${detection.start}`} className={`source-highlight source-highlight--${detection.action}`}>
+        {detection.rawValue}
+      </mark>,
+    );
+    cursor = detection.end;
+  }
+  parts.push(sourceText.slice(cursor));
+  return <>{parts}</>;
+}
 
 export function SyntheticCaseCard({
-  caseId,
-  sourceText,
-  protectedText,
-  scene,
-  summarySelected,
-  detectionProgress,
-  stageScrollY,
-  onSummarize,
+  cases,
+  selectedCase,
+  detections,
+  highlightsVisible,
+  actionLabel,
+  actionDisabled,
+  manualStep,
+  onCaseChange,
+  onAction,
 }: SyntheticCaseCardProps) {
-  const showProtected = ['protect', 'route', 'inspect', 'result'].includes(scene);
-  const showGap = scene === 'gap';
-
   return (
-    <article className="panel case-card">
-      <div className="panel__heading">
-        <div className="case-card__heading-copy">
-          <span className="case-card__icon" aria-hidden="true">01</span>
-          <div>
-            <p className="panel__eyebrow">직원 업무</p>
-            <h2>{COPY.panels.case}</h2>
-          </div>
+    <article className="product-panel consultation-workspace" aria-labelledby="consultation-title">
+      <div className="product-panel__heading">
+        <div>
+          <p className="panel__eyebrow">{COPY.functionalPrototype.case.eyebrow}</p>
+          <h2 id="consultation-title">{COPY.functionalPrototype.case.title}</h2>
         </div>
-        <span className="case-id">{caseId}</span>
+        <span className="case-id">{selectedCase.caseId}</span>
       </div>
-      <p className="synthetic-label">
-        <span className="synthetic-label__icon" aria-hidden="true">◆</span>
-        <span>합성 사례</span>
-        <strong>{COPY.case.classification}</strong>
-      </p>
 
-      <div className="case-card__viewport">
-        <div className="case-card__scroll" style={{transform: `translateY(${stageScrollY}px)`}}>
-          <section className="case-copy">
-            <p className="case-copy__label">{showProtected ? COPY.case.protectedLabel : COPY.case.sourceLabel}</p>
-            <p>{showProtected ? protectedText : sourceText}</p>
-          </section>
+      <label className="case-selector">
+        <span>{COPY.functionalPrototype.case.selector}</span>
+        <select value={selectedCase.caseId} onChange={(event) => onCaseChange(event.target.value)}>
+          {cases.map((item) => <option key={item.caseId} value={item.caseId}>{item.label}</option>)}
+        </select>
+      </label>
 
-          {showGap && (
-            <div className="problem-cards">
-              <p><span>1</span>{COPY.problem.manual}</p>
-              <p><span>2</span>{COPY.problem.blockAll}</p>
-            </div>
-          )}
-
-          {(scene === 'detect' || scene === 'protect') && (
-            <div className="entity-list" aria-label="합성 정보 유형">
-              {ENTITY_LABELS.map((entity, index) => (
-                <span
-                  key={entity.type}
-                  className={detectionProgress * 3 > index ? 'entity-chip is-found' : 'entity-chip'}
-                >
-                  <span className="entity-chip__status" aria-hidden="true">
-                    {detectionProgress * 3 > index ? '✓' : String(index + 1)}
-                  </span>
-                  <b>{entity.type}</b>{entity.value}
-                </span>
-              ))}
-            </div>
-          )}
+      <div className="consultation-document">
+        <div className="document-toolbar">
+          <span>{COPY.functionalPrototype.case.sourceDisclosure}</span>
+          <strong>{COPY.functionalPrototype.case.syntheticNotice}</strong>
+        </div>
+        <p>
+          <HighlightedSource
+            sourceText={selectedCase.sourceText}
+            detections={detections}
+            visible={highlightsVisible}
+          />
+        </p>
+        <div className="detected-entities" aria-label={COPY.functionalPrototype.case.detectedTypesLabel}>
+          {detections.map((detection) => (
+            <span key={`${detection.type}-${detection.start}`} className={highlightsVisible ? 'is-found' : ''}>
+              <b aria-hidden="true">{highlightsVisible ? '✓' : '·'}</b>
+              {TYPE_LABELS[detection.type]}
+            </span>
+          ))}
         </div>
       </div>
+
+      <div className="workspace-intent">
+        <span aria-hidden="true">{COPY.functionalPrototype.case.summaryIcon}</span>
+        <div>
+          <strong>{COPY.functionalPrototype.case.summaryTitle}</strong>
+          <p>{COPY.functionalPrototype.case.summaryDescription}</p>
+        </div>
+      </div>
+
+      {manualStep !== null && (
+        <p className="manual-progress">
+          <span>{COPY.functionalPrototype.case.manualProgress}</span>
+          <strong data-testid="manual-step">{manualStep}/5</strong>
+        </p>
+      )}
 
       <button
         type="button"
-        className={summarySelected ? 'source-action is-selected' : 'source-action'}
-        aria-pressed={summarySelected}
-        onClick={onSummarize}
+        className="button-primary workspace-primary"
+        disabled={actionDisabled}
+        onClick={onAction}
       >
-        {summarySelected ? '상담 정리 선택됨' : COPY.controls.summarize}
+        {actionLabel}<span aria-hidden="true">→</span>
       </button>
+      <p className="workspace-helper">{COPY.scope.official}</p>
     </article>
   );
 }

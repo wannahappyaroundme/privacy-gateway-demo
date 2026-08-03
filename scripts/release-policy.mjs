@@ -47,17 +47,17 @@ const SOURCE_PATHS = [
   /^\.github\/workflows\/(?:ci|pages)\.yml$/u,
   /^public\/favicon\.svg$/u,
   /^public\/fonts\/PrivacyDemoSans-(?:Regular|Bold)\.woff2$/u,
-  /^artifacts\/regression\/(?:07-type-protection-detail|08-explicit-block)\.png$/u,
+  /^artifacts\/regression\/(?:06-request-blocked|07-response-withheld)\.png$/u,
   /^scripts\/[a-z0-9-]+\.mjs$/u,
   /^scripts\/fonts\/[a-z0-9-]+\.py$/u,
   /^src\/.+\.(?:css|json|ts|tsx)$/u,
-  /^tests\/.+\.(?:png|ts)$/u,
+  /^tests\/.+\.(?:png|ts|tsx)$/u,
 ];
 
 const ARTIFACT_PATHS = [
   /^artifacts\/recording-check\.md$/u,
-  /^artifacts\/regression\/(?:07-type-protection-detail|08-explicit-block)\.png$/u,
-  /^artifacts\/submission\/0[1-6]-[a-z0-9-]+\.png$/u,
+  /^artifacts\/regression\/(?:06-request-blocked|07-response-withheld)\.png$/u,
+  /^artifacts\/submission\/(?:01-synthetic-source|02-type-protection|03-local-mock-summary|04-full-response-inspection|05-verified-result|06-request-blocked|07-response-withheld)\.png$/u,
 ];
 
 const SECRET_AND_PATH_RULES = [
@@ -76,6 +76,14 @@ const IDENTIFIER_RULES = [
   {name: 'card-number', pattern: /\b(?:\d{4}[ -]?){3}\d{4}\b/gu},
   {name: 'account-number', pattern: /\b\d{2,6}[ -]\d{2,6}[ -]\d{5,8}\b/gu},
 ];
+
+const BROWSER_BASE_PATH = '/privacy-gateway-demo/';
+const FIXED_BROWSER_RESOURCES = new Map([
+  [BROWSER_BASE_PATH, 'document'],
+  [`${BROWSER_BASE_PATH}favicon.svg`, 'image'],
+  [`${BROWSER_BASE_PATH}fonts/PrivacyDemoSans-Regular.woff2`, 'font'],
+  [`${BROWSER_BASE_PATH}fonts/PrivacyDemoSans-Bold.woff2`, 'font'],
+]);
 
 function lineAt(source, offset) {
   return source.slice(0, offset).split('\n').length;
@@ -98,6 +106,36 @@ export function hashSourceEntries(entries) {
     digest.update('\0');
   }
   return digest.digest('hex');
+}
+
+function browserResourceContract(indexHtml) {
+  const resources = new Map(FIXED_BROWSER_RESOURCES);
+  const attributePattern = /\b(?:href|src)="(\/privacy-gateway-demo\/assets\/[^"]+)"/gu;
+  for (const match of indexHtml.matchAll(attributePattern)) {
+    const path = match[1];
+    if (/\.js$/u.test(path)) resources.set(path, 'script');
+    if (/\.css$/u.test(path)) resources.set(path, 'stylesheet');
+  }
+  return resources;
+}
+
+export function browserRequestFinding(indexHtml, request, expectedOrigin) {
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return `unexpected-resource:${request.method}:${request.resourceType}:${request.url}`;
+  }
+  const contract = browserResourceContract(indexHtml);
+  const expectedType = contract.get(`${url.pathname}${url.search}`);
+  if (
+    request.method === 'GET' &&
+    url.origin === expectedOrigin &&
+    expectedType === request.resourceType
+  ) {
+    return null;
+  }
+  return `unexpected-resource:${request.method}:${request.resourceType}:${request.url}`;
 }
 
 export function isAllowedSourcePath(path) {

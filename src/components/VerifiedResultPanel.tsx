@@ -1,35 +1,40 @@
 import {COPY} from '../content/copy';
-import type {VerifiedField} from '../demo/state';
+
+type ResultField = Readonly<{
+  label: string;
+  value: string;
+  evidence: string;
+}>;
 
 type VerifiedResultPanelProps = {
-  fields: readonly VerifiedField[];
-  revealProgress: number;
+  fields: readonly ResultField[];
+  onRetry(): void;
+  onAnother(): void;
 };
 
-export function VerifiedResultPanel({fields, revealProgress}: VerifiedResultPanelProps) {
+export function VerifiedResultPanel({fields, onRetry, onAnother}: VerifiedResultPanelProps) {
   return (
-    <article
-      className="panel verified-result"
-      data-testid="verified-result"
-      style={{opacity: Math.max(0.2, revealProgress)}}
-    >
-      <div className="verified-result__heading">
-        <div>
-          <p className="panel__eyebrow">전체 응답 검사 완료</p>
-          <h2>확인된 상담요약</h2>
-        </div>
-        <span className="verified-result__status"><span aria-hidden="true">✓</span> 결과 공개</span>
+    <div className="product-result" data-testid="verified-result">
+      <div className="product-result__success" role="status">
+        <span aria-hidden="true">✓</span>
+        <div><strong>{COPY.workspace.complete}</strong><p>{COPY.workspace.completeDescription}</p></div>
       </div>
-      <dl className="result-fields" aria-label="확인된 상담요약 5개 항목">
+      <dl aria-label={COPY.functionalPrototype.result.ariaLabel}>
         {fields.map((field) => (
-          <div key={field.label} className={field.label === '직원이 확인할 항목' ? 'result-field result-field--review' : 'result-field'}>
+          <div
+            key={field.label}
+            className={field.label === COPY.functionalPrototype.result.needsReviewLabel ? 'needs-review' : undefined}
+          >
             <dt>{field.label}</dt>
-            <dd>{field.value}</dd>
-            <dd className="result-field__evidence">{field.evidence}</dd>
+            <dd>{field.value || '-'}</dd>
+            <dd className="result-evidence">{field.evidence}</dd>
           </div>
         ))}
       </dl>
-      <p className="result-effect">{COPY.resultEffect}</p>
-    </article>
+      <div className="result-actions">
+        <button type="button" className="button-primary" onClick={onRetry}>{COPY.workspace.reset}</button>
+        <button type="button" onClick={onAnother}>{COPY.workspace.another}</button>
+      </div>
+    </div>
   );
 }

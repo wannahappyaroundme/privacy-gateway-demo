@@ -2,24 +2,22 @@ import {COPY} from '../content/copy';
 
 export function EvidenceStatusTable() {
   const rows = [
-    [COPY.evidence.externalLabel, COPY.evidence.externalValue, 'link'],
-    [COPY.evidence.beforeInspectionLabel, COPY.evidence.beforeInspectionValue, 'hidden'],
-    [COPY.evidence.operationalLabel, COPY.evidence.operationalValue, 'planned'],
+    [COPY.evidence.storageLabel, COPY.evidence.storageValue],
+    [COPY.evidence.serverLabel, COPY.evidence.serverValue],
+    [COPY.evidence.externalLabel, COPY.evidence.externalValue],
+    [COPY.evidence.executionLabel, COPY.evidence.executionValue],
   ] as const;
 
   return (
-    <section className="evidence-table" data-testid="evidence-status">
-      <p className="panel__eyebrow">원문 없는 상태표</p>
-      <h2>{COPY.panels.evidence}</h2>
+    <section className="evidence-compact" data-testid="evidence-status" aria-labelledby="evidence-title">
+      <div className="compact-heading">
+        <strong id="evidence-title">{COPY.functionalPrototype.evidence.title}</strong>
+        <span>{COPY.functionalPrototype.evidence.currentSurface}</span>
+      </div>
       <dl>
-        {rows.map(([label, value, state]) => (
-          <div key={label} className={`evidence-row evidence-row--${state}`}>
-            <dt>
-              <span className="evidence-row__icon" aria-hidden="true">
-                {state === 'link' ? '×' : state === 'hidden' ? '✓' : 'i'}
-              </span>
-              {label}
-            </dt>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt><span aria-hidden="true">✓</span>{label}</dt>
             <dd>{value}</dd>
           </div>
         ))}

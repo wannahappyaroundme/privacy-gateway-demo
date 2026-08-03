@@ -1,8 +1,9 @@
 import {useEffect, useRef, useState} from 'react';
 
-import rawFixture from '../demo/fixtures/synthetic-consultation-v1.json?raw';
-import {validateFixture} from '../demo/schema';
-import type {TimelineResult} from '../demo/state';
+import rawCases from '../demo/fixtures/synthetic-cases-v2.json?raw';
+import {recordingSelection} from '../demo/recording';
+import {loadSyntheticCases} from '../demo/schema';
+import type {RunOutcome} from '../prototype/run';
 import {COPY} from '../content/copy';
 import {DemoShell} from '../components/DemoShell';
 import {ProductWorkspace} from '../components/ProductWorkspace';
@@ -12,13 +13,18 @@ import {
   type DemoRuntimeView,
 } from './DemoRuntime';
 
-function BootstrapMessage({bootstrap}: {bootstrap: BootstrapState}) {
+export function BootstrapMessage({bootstrap}: {bootstrap: BootstrapState}) {
   if (bootstrap.kind === 'loading') {
-    return <section className="bootstrap-card" role="status"><span className="loading-ring" />{COPY.bootstrap.loading}</section>;
+    return (
+      <section className="bootstrap-card" role="status">
+        <span className="loading-ring" aria-hidden="true" />
+        <h1>{COPY.bootstrap.loading}</h1>
+      </section>
+    );
   }
   if (bootstrap.kind === 'empty') {
     return (
-      <section className="bootstrap-card">
+      <section className="bootstrap-card" role="status">
         <h1>{COPY.bootstrap.emptyTitle}</h1>
         <p>{COPY.bootstrap.emptyDescription}</p>
         <button type="button" onClick={() => window.location.reload()}>{COPY.bootstrap.emptyAction}</button>
@@ -38,26 +44,30 @@ function LiveRegion({view}: {view: DemoRuntimeView}) {
   const [message, setMessage] = useState('');
   const previous = useRef<{
     phase: DemoRuntimeView['runtime']['phase'];
-    result: TimelineResult;
+    outcome: RunOutcome | null;
   } | null>(null);
 
   useEffect(() => {
     const current = {
       phase: view.runtime.phase,
-      result: view.timeline?.result ?? null,
+      outcome: view.timeline?.run.outcome ?? null,
     };
     const before = previous.current;
     previous.current = current;
     if (before === null || view.timeline === null) return;
 
     if (current.phase === 'playing' && before.phase === 'idle') {
-      setMessage('단디가 상담 메모의 개인정보 보호 처리를 시작했습니다.');
-    } else if (current.phase === 'complete' && before.phase !== 'complete') {
-      setMessage('상담 요약이 준비되었습니다. 확인된 결과를 표시합니다.');
-    } else if (current.result?.kind === 'withheld' && before.result?.kind !== 'withheld') {
-      setMessage('확인이 필요한 결과는 표시하지 않았습니다.');
+      setMessage(COPY.live.started);
+    } else if (current.outcome === 'VERIFIED' && before.outcome !== 'VERIFIED') {
+      setMessage(COPY.live.verified);
+    } else if (
+      current.phase === 'complete' &&
+      current.outcome !== 'VERIFIED' &&
+      before.phase !== 'complete'
+    ) {
+      setMessage(COPY.live.withheld);
     } else if (current.phase === 'paused' && before.phase !== 'paused') {
-      setMessage('처리가 일시정지되었습니다. 계속 진행 버튼으로 이어갈 수 있습니다.');
+      setMessage(COPY.live.paused);
     }
   }, [view.runtime.phase, view.timeline]);
 
@@ -88,33 +98,66 @@ function useStickyManualOnly() {
 
 export function App() {
   const [bootstrap, setBootstrap] = useState<BootstrapState>(() =>
-    rawFixture.trim().length === 0 ? {kind: 'empty'} : {kind: 'loading'},
+    rawCases.trim().length === 0 ? {kind: 'empty'} : {kind: 'loading'},
   );
 
   useEffect(() => {
     let active = true;
-    if (rawFixture.trim().length === 0) return;
-    validateFixture(rawFixture)
-      .then((fixture) => {
-        if (active) setBootstrap({kind: 'ready', fixture});
-      })
-      .catch((error: unknown) => {
-        const type = error instanceof Error ? error.name : 'UnknownError';
-        console.error('demo-bootstrap', {type, rule: 'fixture-validation'});
+    if (rawCases.trim().length === 0) return;
+    try {
+      const cases = loadSyntheticCases(rawCases);
+      const recording = recordingSelection(window.location);
+      if (recording.kind === 'invalid') {
+        queueMicrotask(() => {
+          if (active) setBootstrap({kind: 'invalid', rule: 'recording-case-allowlist'});
+        });
+        return;
+      }
+      const selectedCaseId = recording.kind === 'valid' ? recording.caseId : cases[0]?.caseId;
+      if (!selectedCaseId || !cases.some(({caseId}) => caseId === selectedCaseId)) {
+        queueMicrotask(() => {
+          if (active) setBootstrap({kind: 'invalid', rule: 'case-selection'});
+        });
+        return;
+      }
+      queueMicrotask(() => {
+        if (active) setBootstrap({kind: 'ready', cases, selectedCaseId});
+      });
+    } catch (error: unknown) {
+      const type = error instanceof Error ? error.name : 'UnknownError';
+      console.error('demo-bootstrap', {type, rule: 'fixture-validation'});
+      queueMicrotask(() => {
         if (active) setBootstrap({kind: 'invalid', rule: 'fixture-validation'});
       });
+    }
     return () => { active = false; };
   }, []);
 
   const manualOnly = useStickyManualOnly();
 
+  const selectCase = (caseId: string) => {
+    setBootstrap((current) => {
+      if (current.kind !== 'ready' || !current.cases.some((item) => item.caseId === caseId)) {
+        return current;
+      }
+      return {...current, selectedCaseId: caseId};
+    });
+  };
+
   return (
-    <DemoRuntime bootstrap={bootstrap} manualOnly={manualOnly}>
+    <DemoRuntime
+      key={bootstrap.kind === 'ready' ? bootstrap.selectedCaseId : bootstrap.kind}
+      bootstrap={bootstrap}
+      manualOnly={manualOnly}
+    >
       {(view) => (
         <DemoShell frame={view.runtime.frame} recordingMode={view.recordingMode}>
-          <LiveRegion view={view} />
+          <LiveRegion
+            key={view.bootstrap.kind === 'ready' ? view.bootstrap.selectedCaseId : view.bootstrap.kind}
+            view={view}
+          />
           {view.bootstrap.kind === 'ready'
-            ? <ProductWorkspace view={view} />
+            ? <ProductWorkspace view={view} manualOnly={manualOnly} onCaseChange={selectCase} />
             : <BootstrapMessage bootstrap={view.bootstrap} />}
         </DemoShell>
       )}

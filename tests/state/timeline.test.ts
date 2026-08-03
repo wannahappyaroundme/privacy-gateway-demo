@@ -1,226 +1,131 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-import {beforeAll, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 
-import type {ValidatedFixture} from '@/demo/schema';
-import {validateFixture} from '@/demo/schema';
+import {loadSyntheticCases} from '@/demo/schema';
 import {
-  HOLD_RANGES,
   MANUAL_STOPS,
-  SUMMARIZE_BUTTON_BOUNDS,
+  stageAtFrame,
   stateAt,
   stateSignature,
 } from '@/demo/timeline';
 
-const rawFixture = readFileSync(
-  resolve('src/demo/fixtures/synthetic-consultation-v1.json'),
-  'utf8',
+const cases = loadSyntheticCases(
+  readFileSync(resolve('src/demo/fixtures/synthetic-cases-v2.json'), 'utf8'),
 );
+const normalCase = cases.find(({caseId}) => caseId === 'SYN-NORMAL-001')!;
+const blockedCase = cases.find(({caseId}) => caseId === 'SYN-BLOCK-001')!;
+const withheldCase = cases.find(({caseId}) => caseId === 'SYN-WITHHOLD-001')!;
 
-let fixture: ValidatedFixture;
+describe('engine-backed 900-frame timeline', () => {
+  it('returns one deterministic runtime snapshot for every supported frame', () => {
+    for (let frame = 0; frame <= 899; frame += 1) {
+      const first = stateAt(frame, normalCase);
+      const second = stateAt(frame, normalCase);
 
-beforeAll(async () => {
-  fixture = await validateFixture(rawFixture);
-});
-
-describe('pure 990-frame timeline', () => {
-  for (let frame = 0; frame <= 989; frame += 1) {
-    it(`returns deterministic valid state for frame ${frame}`, () => {
-      const first = stateAt(frame, fixture);
-      const second = stateAt(frame, fixture);
-
-      expect(first.frame).toBe(frame);
-      expect(first).toEqual(second);
-    });
-  }
-
-  it.each([-1, 990, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.NaN])(
-    'rejects invalid frame %s',
-    (frame) => {
-      expect(() => stateAt(frame, fixture)).toThrow('Frame must be an integer from 0 to 989');
-    },
-  );
-
-  it.each([0.1, 44.5, 899.9])('rejects non-integer frame %s', (frame) => {
-    expect(() => stateAt(frame, fixture)).toThrow('Frame must be an integer from 0 to 989');
+      expect(first.frame, `frame ${frame}`).toBe(frame);
+      expect(first, `frame ${frame}`).toEqual(second);
+      expect(first.run.caseId, `frame ${frame}`).toBe(normalCase.caseId);
+    }
   });
 
-  it('exposes the exact approved manual stops', () => {
-    expect(MANUAL_STOPS).toEqual([45, 150, 225, 360, 480, 610, 750, 855, 945]);
+  it('maps every supported frame to one monotonic engine stage', () => {
+    const order = ['detected', 'protected', 'mocked', 'inspected', 'published'];
+    let previous = 0;
+    for (let frame = 0; frame <= 899; frame += 1) {
+      const current = order.indexOf(stageAtFrame(frame));
+      expect(current, `frame ${frame}`).toBeGreaterThanOrEqual(previous);
+      previous = current;
+    }
   });
 
   it.each([
-    [0, 'overview'],
-    [89, 'overview'],
-    [90, 'gap'],
-    [179, 'gap'],
-    [180, 'detect'],
-    [299, 'detect'],
-    [300, 'protect'],
-    [419, 'protect'],
-    [420, 'route'],
-    [539, 'route'],
-    [540, 'inspect'],
-    [689, 'inspect'],
-    [690, 'result'],
-    [809, 'result'],
-    [810, 'finish'],
-    [899, 'finish'],
-    [900, 'withheld'],
-    [989, 'withheld'],
-  ] as const)('maps boundary frame %i to %s', (frame, scene) => {
-    expect(stateAt(frame, fixture).scene).toBe(scene);
+    [0, 'detected'],
+    [134, 'detected'],
+    [135, 'protected'],
+    [269, 'protected'],
+    [270, 'mocked'],
+    [472, 'mocked'],
+    [473, 'inspected'],
+    [742, 'inspected'],
+    [743, 'published'],
+    [899, 'published'],
+  ] as const)('maps boundary frame %i to engine stage %s', (frame, stage) => {
+    expect(stageAtFrame(frame)).toBe(stage);
+    expect(stateAt(frame, normalCase).runStage).toBe(stage);
   });
 
-  it('keeps one render signature throughout every approved hold', () => {
-    for (const [start, end] of HOLD_RANGES) {
-      const expected = stateSignature(stateAt(start, fixture));
-      for (let frame = start + 1; frame < end; frame += 1) {
-        expect(stateSignature(stateAt(frame, fixture)), `hold [${start}, ${end}) at ${frame}`).toBe(
-          expected,
-        );
-      }
-    }
+  it.each([-1, 900, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.NaN, 44.5])(
+    'rejects unsupported frame %s',
+    (frame) => {
+      expect(() => stageAtFrame(frame)).toThrow('Frame must be an integer from 0 to 899');
+      expect(() => stateAt(frame, normalCase)).toThrow('Frame must be an integer from 0 to 899');
+    },
+  );
+
+  it('exposes only the five reviewed manual snapshots', () => {
+    expect(MANUAL_STOPS).toEqual([45, 180, 360, 610, 790]);
+    expect(MANUAL_STOPS.map(stageAtFrame)).toEqual([
+      'detected',
+      'protected',
+      'mocked',
+      'inspected',
+      'published',
+    ]);
   });
 
-  it('never exposes a verified or withheld result before inspection', () => {
-    for (let frame = 0; frame <= 689; frame += 1) {
-      const state = stateAt(frame, fixture);
-      expect(state.result).toBeNull();
-      expect(state.inspection.complete).toBe(false);
-      expect(state.inspection.disclosureAllowed).toBe(false);
-    }
-  });
-
-  it('returns the exact verified result only for the success window', () => {
-    for (let frame = 690; frame <= 899; frame += 1) {
-      const state = stateAt(frame, fixture);
-      expect(state.result).toEqual({kind: 'verified', fields: fixture.verifiedResult});
-      expect(Object.keys(state.result ?? {}).sort()).toEqual(['fields', 'kind']);
-      expect(state.inspection.complete).toBe(true);
-      expect(state.inspection.disclosureAllowed).toBe(true);
-      expect(state.resultRevealProgress).toBeGreaterThanOrEqual(0);
-      expect(state.resultRevealProgress).toBeLessThanOrEqual(1);
-    }
-  });
-
-  it('isolates verified fields from fixture and later timeline states', () => {
-    const first = stateAt(750, fixture);
-    expect(first.result?.kind).toBe('verified');
-    if (first.result?.kind !== 'verified') throw new Error('Expected verified result');
-
-    const originalValue = fixture.verifiedResult[0].value;
-    const mutableField = first.result.fields[0] as {value: string};
-    Reflect.set(mutableField, 'value', '변경 시도');
-
-    const later = stateAt(750, fixture);
-    expect(later.result?.kind).toBe('verified');
-    if (later.result?.kind !== 'verified') throw new Error('Expected verified result');
-
-    expect(fixture.verifiedResult[0].value).toBe(originalValue);
-    expect(first.result.fields[0].value).toBe(originalValue);
-    expect(later.result.fields[0].value).toBe(originalValue);
-    expect(Object.isFrozen(first.result.fields)).toBe(true);
-    expect(Object.isFrozen(first.result.fields[0])).toBe(true);
-    expect(first.result.fields).not.toBe(fixture.verifiedResult);
-    expect(first.result.fields[0]).not.toBe(fixture.verifiedResult[0]);
-    expect(later.result.fields[0]).not.toBe(first.result.fields[0]);
-  });
-
-  it('returns the exact withheld state only for the block window', () => {
-    for (let frame = 900; frame <= 989; frame += 1) {
-      const state = stateAt(frame, fixture);
-      expect(state.result).toEqual({
-        kind: 'withheld',
-        reason: fixture.blockReason.description,
-        helpExpanded: frame >= 960,
-      });
-      expect(Object.keys(state.result ?? {}).sort()).toEqual(['helpExpanded', 'kind', 'reason']);
-      expect(state.inspection.complete).toBe(true);
-      expect(state.inspection.disclosureAllowed).toBe(false);
-      expect(state.resultRevealProgress).toBe(0);
-    }
-  });
-
-  it('uses the exact block-help windows', () => {
-    expect(stateAt(959, fixture).result).toMatchObject({kind: 'withheld', helpExpanded: false});
-    expect(stateAt(960, fixture).result).toMatchObject({kind: 'withheld', helpExpanded: true});
-    expect(stateAt(975, fixture).result).toMatchObject({kind: 'withheld', helpExpanded: true});
-    expect(stateAt(989, fixture).result).toMatchObject({kind: 'withheld', helpExpanded: true});
-  });
-
-  it('scrolls the internal stage exactly 80px without moving a stable capture frame', () => {
-    expect(stateAt(179, fixture).stageScrollY).toBe(0);
-    expect(stateAt(180, fixture).stageScrollY).toBe(0);
-    expect(stateAt(195, fixture).stageScrollY).toBeLessThan(0);
-    expect(stateAt(209, fixture).stageScrollY).toBe(-80);
-    expect(stateAt(210, fixture).stageScrollY).toBe(-80);
-    expect(stateAt(989, fixture).stageScrollY).toBe(-80);
-  });
-
-  it('moves, holds, presses, releases, and hides the virtual pointer on exact frames', () => {
-    expect(stateAt(119, fixture).pointer.phase).toBe('hidden');
-    expect(stateAt(120, fixture).pointer.phase).toBe('moving');
-    expect(stateAt(143, fixture).pointer.phase).toBe('moving');
-    expect(stateAt(144, fixture).pointer.phase).toBe('holding');
-    expect(stateAt(155, fixture).pointer.phase).toBe('holding');
-    expect(stateAt(156, fixture).pointer.phase).toBe('pressed');
-    expect(stateAt(159, fixture).pointer.phase).toBe('pressed');
-    expect(stateAt(160, fixture).pointer.phase).toBe('released');
-    expect(stateAt(165, fixture).pointer.phase).toBe('released');
-    expect(stateAt(166, fixture).pointer.phase).toBe('hidden');
-    expect(stateAt(171, fixture).pointer.phase).toBe('hidden');
-  });
-
-  it('keeps the cursor hotspot inside the summarize target for every click frame', () => {
-    expect(stateAt(150, fixture).pointer).toMatchObject({
-      x: SUMMARIZE_BUTTON_BOUNDS.x + SUMMARIZE_BUTTON_BOUNDS.width / 2,
-      y: SUMMARIZE_BUTTON_BOUNDS.y + SUMMARIZE_BUTTON_BOUNDS.height / 2,
-    });
-
-    for (let frame = 156; frame <= 165; frame += 1) {
-      const {x, y} = stateAt(frame, fixture).pointer;
-      expect(x).toBeGreaterThanOrEqual(SUMMARIZE_BUTTON_BOUNDS.x);
-      expect(x).toBeLessThanOrEqual(
-        SUMMARIZE_BUTTON_BOUNDS.x + SUMMARIZE_BUTTON_BOUNDS.width,
-      );
-      expect(y).toBeGreaterThanOrEqual(SUMMARIZE_BUTTON_BOUNDS.y);
-      expect(y).toBeLessThanOrEqual(
-        SUMMARIZE_BUTTON_BOUNDS.y + SUMMARIZE_BUTTON_BOUNDS.height,
-      );
-    }
-  });
-
-  it('keeps external payload progress at zero while activating only the approved route', () => {
-    for (let frame = 0; frame <= 989; frame += 1) {
-      const route = stateAt(frame, fixture).route;
-      expect(route.externalPayloadProgress).toBe(0);
-      expect(route.internalProgress).toBeGreaterThanOrEqual(0);
-      expect(route.internalProgress).toBeLessThanOrEqual(1);
+  it('does not expose verified fields before the published stage', () => {
+    for (const frame of [0, 134, 135, 269, 270, 472, 473, 742]) {
+      const state = stateAt(frame, normalCase);
+      expect(state.run.verifiedFields, `frame ${frame}`).toBeNull();
+      expect(state).not.toHaveProperty('result');
     }
 
-    expect(stateAt(419, fixture).route.externalState).toBe('not-shown');
-    expect(stateAt(420, fixture).route.externalState).toBe('blocked');
-    expect(stateAt(465, fixture).route).toMatchObject({
-      externalState: 'blocked',
-      internalState: 'approved',
-      internalProgress: 1,
+    expect(stateAt(743, normalCase).run).toMatchObject({
+      reachedStage: 'published',
+      outcome: 'VERIFIED',
+      verifiedFields: expect.objectContaining({
+        customerRequest: expect.stringContaining('합성계좌-001'),
+      }),
     });
   });
 
-  it('finishes inspection before any success result appears', () => {
-    expect(stateAt(539, fixture).inspection.progress).toBe(0);
-    expect(stateAt(540, fixture).inspection.progress).toBe(0);
-    expect(stateAt(689, fixture).inspection.progress).toBe(1);
-    expect(stateAt(689, fixture).result).toBeNull();
-    expect(stateAt(690, fixture).inspection.progress).toBe(1);
-    expect(stateAt(690, fixture).result?.kind).toBe('verified');
+  it('shows request blocking only when the protection engine reaches its terminal outcome', () => {
+    expect(stateAt(134, blockedCase).run).toMatchObject({
+      reachedStage: 'detected',
+      outcome: 'DETECTED',
+      modelCallCount: 0,
+      verifiedFields: null,
+    });
+    expect(stateAt(135, blockedCase).run).toMatchObject({
+      reachedStage: 'protected',
+      outcome: 'REQUEST_BLOCKED_UNSUPPORTED',
+      modelCallCount: 0,
+      verifiedFields: null,
+    });
   });
 
-  it('keeps future validation sample claims out of every timeline state', () => {
-    for (const frame of [0, 45, 809, 820, 899, 989]) {
-      expect(stateAt(frame, fixture)).not.toHaveProperty('validation');
-    }
+  it('shows response withholding only when inspection returns its terminal outcome', () => {
+    expect(stateAt(472, withheldCase).run).toMatchObject({
+      reachedStage: 'mocked',
+      outcome: 'MOCKED',
+      modelCallCount: 1,
+      verifiedFields: null,
+    });
+    expect(stateAt(473, withheldCase).run).toMatchObject({
+      reachedStage: 'inspected',
+      outcome: 'RESPONSE_WITHHELD_MARKER',
+      modelCallCount: 1,
+      verifiedFields: null,
+    });
+  });
+
+  it('keeps signatures case-aware while omitting the requested frame number', () => {
+    const signature = stateSignature(stateAt(45, normalCase));
+    expect(signature).not.toBe(
+      stateSignature(stateAt(45, blockedCase)),
+    );
+    expect(JSON.parse(signature)).not.toHaveProperty('frame');
   });
 });

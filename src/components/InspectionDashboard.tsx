@@ -1,97 +1,42 @@
+import type {InspectionCheck} from '../prototype/inspect';
 import {COPY} from '../content/copy';
-import type {InspectionState} from '../demo/state';
-import {InspectionGate} from './InspectionGate';
 
 type InspectionDashboardProps = {
-  inspection: InspectionState;
+  checks: readonly InspectionCheck[];
 };
 
-const PRE_DISCLOSURE_THRESHOLDS = [1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6] as const;
+const CHECK_LABELS: Readonly<Record<InspectionCheck['code'], string>> = {
+  OUTPUT_SCHEMA: COPY.functionalPrototype.inspection.checkLabels.outputSchema,
+  MARKER_INTEGRITY: COPY.functionalPrototype.inspection.checkLabels.markerIntegrity,
+  RAW_RESIDUE: COPY.functionalPrototype.inspection.checkLabels.rawResidue,
+  SOURCE_GROUNDING: COPY.functionalPrototype.inspection.checkLabels.sourceGrounding,
+  FINANCIAL_DECISION: COPY.functionalPrototype.inspection.checkLabels.financialDecision,
+};
 
-export function InspectionDashboard({inspection}: InspectionDashboardProps) {
-  const completedCount = inspection.complete
-    ? COPY.inspection.checks.length
-    : PRE_DISCLOSURE_THRESHOLDS.filter((threshold) => inspection.progress >= threshold).length;
-  const activeIndex = inspection.complete
-    ? -1
-    : Math.min(completedCount, COPY.inspection.checks.length - 1);
-  const percent = Math.round(inspection.progress * 100);
+const STATUS_LABELS: Readonly<Record<InspectionCheck['status'], string>> = {
+  'not-run': COPY.functionalPrototype.inspection.statuses.waiting,
+  pass: COPY.functionalPrototype.inspection.statuses.pass,
+  fail: COPY.functionalPrototype.inspection.statuses.fail,
+};
 
+export function InspectionDashboard({checks}: InspectionDashboardProps) {
   return (
-    <section className="inspection-dashboard" data-testid="inspection-dashboard">
-      <article className="panel inspection-progress-card">
-        <div className="inspection-progress-card__heading">
-          <div>
-            <p className="panel__eyebrow">검사 진행</p>
-            <h2>전체 응답 확인</h2>
-          </div>
-          <strong aria-label={`${percent}% 진행`}>{percent}<small>%</small></strong>
-        </div>
-        <div
-          className="inspection-progress-card__bar"
-          role="progressbar"
-          aria-label="전체 응답 검사 진행률"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-        >
-          <span style={{width: `${percent}%`}} />
-        </div>
-        <ol className="inspection-progress-list">
-          {COPY.inspection.checks.map(([label], index) => {
-            const complete = index < completedCount;
-            const active = index === activeIndex;
-            return (
-              <li key={label} className={complete ? 'is-complete' : active ? 'is-active' : undefined}>
-                <span aria-hidden="true">{complete ? '✓' : String(index + 1)}</span>
-                <div>
-                  <b>{label}</b>
-                  <small>{complete ? '통과' : active ? '검사 중' : '검사 대기'}</small>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </article>
-
-      <article className="panel inspection-detail-card">
-        <div className="inspection-detail-card__heading">
-          <div>
-            <p className="panel__eyebrow">현재까지 요약</p>
-            <h2>6개 공개 조건을 순서대로 확인합니다</h2>
-          </div>
-          <span>{completedCount}/6 통과</span>
-        </div>
-        <div className="inspection-summary" aria-label="검사 상태 요약">
-          <p><span aria-hidden="true">✓</span><strong>{completedCount}</strong> 통과</p>
-          <p><span aria-hidden="true">!</span><strong>0</strong> 위험</p>
-          <p><span aria-hidden="true">×</span><strong>0</strong> 차단</p>
-          <p><span aria-hidden="true">…</span><strong>{inspection.complete ? 0 : 1}</strong> 검사 중</p>
-        </div>
-        <div className="inspection-check-table" role="list" aria-label="전체 응답 검사 상세">
-          {COPY.inspection.checks.map(([label, description], index) => {
-            const complete = index < completedCount;
-            const active = index === activeIndex;
-            return (
-              <div
-                key={label}
-                role="listitem"
-                data-testid="inspection-check"
-                className={complete ? 'is-complete' : active ? 'is-active' : undefined}
-              >
-                <span className="inspection-check-table__icon" aria-hidden="true">
-                  {complete ? '✓' : active ? '…' : String(index + 1)}
-                </span>
-                <div><b>{label}</b><small>{description}</small></div>
-                <strong>{complete ? '통과' : active ? '검사 중' : '대기'}</strong>
-              </div>
-            );
-          })}
-        </div>
-        <p className="inspection-demo-note">{COPY.inspection.fixedDemoNotice}</p>
-      </article>
-
-      <InspectionGate inspection={inspection} />
+    <section className="inspection-compact" aria-labelledby="inspection-compact-title">
+      <div className="compact-heading">
+        <strong id="inspection-compact-title">{COPY.functionalPrototype.inspection.title}</strong>
+        <span>
+          {checks.filter(({status}) => status === 'pass').length}/5 {COPY.functionalPrototype.inspection.confirmed}
+        </span>
+      </div>
+      <ul className="inspection-compact__list">
+        {checks.map((check, index) => (
+          <li key={check.code} data-testid="inspection-check" data-check-status={check.status}>
+            <span aria-hidden="true">{check.status === 'pass' ? '✓' : check.status === 'fail' ? '!' : index + 1}</span>
+            <strong>{CHECK_LABELS[check.code]}</strong>
+            <small>{STATUS_LABELS[check.status]}</small>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

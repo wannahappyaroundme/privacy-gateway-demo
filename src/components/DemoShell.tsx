@@ -30,12 +30,7 @@ export function DemoShell({frame, recordingMode, children}: DemoShellProps) {
             <p className="brand-promise">{COPY.product.category}</p>
           </div>
         </div>
-        <nav className="product-nav" aria-label="단디 업무 메뉴">
-          <a href="#consultation-title" aria-current="page">상담 요약</a>
-          <span>보호 정책</span>
-          <span>처리 이력</span>
-        </nav>
-        <div className="header-context"><span aria-hidden="true">은</span><strong>은행 상담 업무</strong></div>
+        <p className="header-boundary">{COPY.scope.official}</p>
       </header>
 
       <div className="stage-content">{children}</div>

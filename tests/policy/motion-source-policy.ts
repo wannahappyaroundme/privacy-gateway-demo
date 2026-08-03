@@ -1,5 +1,11 @@
 import ts from 'typescript';
 
+import {
+  findReviewedPrototypeGraphViolations,
+  findReviewedPrototypeSourceViolations,
+  type ReviewedPrototypeSource,
+} from './prototype-source-gate';
+
 export type MotionPolicyViolation = {
   file: string;
   line: number;
@@ -7,6 +13,91 @@ export type MotionPolicyViolation = {
   rule: string;
 };
 
+type StaticRule = Readonly<{name: string; pattern: RegExp}>;
+
+const PROTOTYPE_BOUNDARY_RULES: readonly StaticRule[] = [
+  {name: 'prototype-network:fetch', pattern: /\bfetch\s*\(/gu},
+  {name: 'prototype-network:XMLHttpRequest', pattern: /\bXMLHttpRequest\b/gu},
+  {name: 'prototype-network:WebSocket', pattern: /\bWebSocket\b/gu},
+  {name: 'prototype-network:EventSource', pattern: /\bEventSource\b/gu},
+  {name: 'prototype-network:sendBeacon', pattern: /\bsendBeacon\s*\(/gu},
+  {name: 'prototype-storage:web-storage', pattern: /\b(?:localStorage|sessionStorage)\b/gu},
+  {name: 'prototype-storage:indexed-db', pattern: /\bindexedDB\b/gu},
+  {name: 'prototype-storage:cache-api', pattern: /\bcaches\b/gu},
+  {name: 'prototype-storage:cookie-write', pattern: /\bdocument\s*\.\s*cookie\s*=/gu},
+  {
+    name: 'prototype-storage:service-worker-register',
+    pattern: /\bserviceWorker\s*\.\s*register\s*\(/gu,
+  },
+  {name: 'prototype-nondeterminism:wall-clock', pattern: /\bDate\s*\.\s*now\s*\(/gu},
+  {name: 'prototype-nondeterminism:random', pattern: /\bMath\s*\.\s*random\s*\(/gu},
+  {name: 'prototype-code-generation:eval', pattern: /\beval\b/gu},
+  {
+    name: 'prototype-code-generation:constructor',
+    pattern: /\b(?:AsyncFunction|AsyncGeneratorFunction|Function|GeneratorFunction|WebAssembly)\b/gu,
+  },
+  {name: 'prototype-code-generation:string-timer', pattern: /\b(?:setInterval|setTimeout)\b/gu},
+];
+
+const PUBLIC_CONTENT_RULES: readonly StaticRule[] = [
+  {name: 'prototype-brand:external-provider', pattern: /\b(?:OpenAI|ChatGPT)\b/gu},
+  {name: 'prototype-brand:bank', pattern: /\b(?:KB|iM)\b/gu},
+  {name: 'prototype-identifier:phone', pattern: /\b01[016789][ -]?\d{3,4}[ -]?\d{4}\b/gu},
+  {name: 'prototype-identifier:resident', pattern: /\b\d{6}[ -]?[1-4]\d{6}\b/gu},
+  {name: 'prototype-identifier:card', pattern: /\b(?:\d{4}[ -]?){3}\d{4}\b/gu},
+  {name: 'prototype-identifier:account', pattern: /\b\d{2,6}[ -]\d{2,6}[ -]\d{5,8}\b/gu},
+];
+
+const FIXTURE_SHORTCUT_FIELDS = ['expectedOutcome', 'verifiedResult', 'mockResponse'] as const;
+function staticRuleViolations(
+  source: string,
+  fileName: string,
+  rules: readonly StaticRule[],
+): MotionPolicyViolation[] {
+  const violations: MotionPolicyViolation[] = [];
+  for (const rule of rules) {
+    rule.pattern.lastIndex = 0;
+    for (const match of source.matchAll(rule.pattern)) {
+      const prefix = source.slice(0, match.index);
+      const lines = prefix.split('\n');
+      violations.push({
+        file: fileName,
+        line: lines.length,
+        column: (lines.at(-1)?.length ?? 0) + 1,
+        rule: rule.name,
+      });
+    }
+  }
+  return violations;
+}
+
+export {findReviewedPrototypeGraphViolations};
+export type {ReviewedPrototypeSource};
+
+export function findPrototypeSourcePolicyViolations(
+  source: string,
+  fileName: string,
+): MotionPolicyViolation[] {
+  const normalized = fileName.replaceAll('\\', '/');
+  const prototype = normalized.startsWith('src/prototype/') || normalized.includes('/src/prototype/');
+  const fixture = normalized.endsWith('/src/demo/fixtures/synthetic-cases-v2.json') ||
+    normalized === 'src/demo/fixtures/synthetic-cases-v2.json';
+  if (!prototype && !fixture) return [];
+
+  const violations = staticRuleViolations(source, fileName, PUBLIC_CONTENT_RULES);
+  if (prototype) {
+    violations.push(...staticRuleViolations(source, fileName, PROTOTYPE_BOUNDARY_RULES));
+    violations.push(...findReviewedPrototypeSourceViolations(source, fileName));
+  }
+  if (fixture) {
+    const fixtureRules = FIXTURE_SHORTCUT_FIELDS.map((field) => ({
+      name: `fixture-forbidden-field:${field}`,
+      pattern: new RegExp(`"${field}"\\s*:`, 'gu'),
+    }));
+    violations.push(...staticRuleViolations(source, fileName, fixtureRules));
+  }
+  return violations;
+}
 const MOTION_MODULE = /^(?:motion|framer-motion|motion-dom|motion-utils)(?:\/|$)/u;
 const FORBIDDEN_CALLS = new Set([
   'animate',

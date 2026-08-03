@@ -1,7 +1,23 @@
 import {expect, test} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+
+type BrowserPolicy = {
+  browserRequestFinding: (
+    indexHtml: string,
+    request: {method: string; url: string; resourceType: string},
+    expectedOrigin: string,
+  ) => string | null;
+};
+
+async function loadBrowserPolicy(): Promise<BrowserPolicy> {
+  const url = pathToFileURL(resolve('scripts/release-policy.mjs')).href;
+  return (await import(url)) as BrowserPolicy;
+}
 
 type NetworkPolicyState = {
-  calls: string[];
+  apiCalls: string[];
   storageWrites: string[];
 };
 
@@ -13,9 +29,9 @@ declare global {
 
 test.beforeEach(async ({page}) => {
   await page.addInitScript(() => {
-    const state = {calls: [] as string[], storageWrites: [] as string[]};
+    const state = {apiCalls: [] as string[], storageWrites: [] as string[]};
     window.__FPG_NETWORK_POLICY_TEST__ = state;
-    const record = (name: string) => state.calls.push(name);
+    const record = (name: string) => state.apiCalls.push(name);
 
     for (const [name, constructor] of Object.entries({
       WebSocket: window.WebSocket,
@@ -124,29 +140,106 @@ test.beforeEach(async ({page}) => {
   });
 });
 
-test('makes no application egress or browser storage writes across automatic, result, block, and help states', async ({page}) => {
-  const unexpectedRequests: string[] = [];
+test('keeps every reviewed outcome free of egress, persistence, console content, and raw evidence', async ({page}) => {
+  const policy = await loadBrowserPolicy();
+  const builtIndex = readFileSync(resolve('dist/index.html'), 'utf8');
+  let unexpectedRequests: string[] = [];
+  let consoleMessages: Array<Promise<string>> = [];
+  let pageErrors: string[] = [];
   page.on('request', (request) => {
-    const url = new URL(request.url());
-    const allowedPath = /\/(?:|privacy-gateway-demo\/|privacy-gateway-demo\/[^?#]+\.(?:js|css|woff2|html))$/u;
-    const allowedType = new Set(['document', 'script', 'stylesheet', 'font']);
-    if (url.origin !== 'http://127.0.0.1:4173' || !allowedPath.test(url.pathname) || !allowedType.has(request.resourceType())) {
-      unexpectedRequests.push(`${request.resourceType()}:${request.url()}`);
-    }
+    const finding = policy.browserRequestFinding(
+      builtIndex,
+      {method: request.method(), url: request.url(), resourceType: request.resourceType()},
+      'http://127.0.0.1:4173',
+    );
+    if (finding !== null) unexpectedRequests.push(finding);
   });
+  page.on('console', (message) => {
+    consoleMessages.push((async () => {
+      const values = await Promise.all(
+        message.args().map(async (argument) => {
+          try {
+            return await argument.jsonValue();
+          } catch {
+            return message.text();
+          }
+        }),
+      );
+      return `${message.type()}:${JSON.stringify(values)}`;
+    })());
+  });
+  page.on('pageerror', (error) => pageErrors.push(error.message));
 
   await page.clock.install();
-  await page.goto('./');
-  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
-  await page.clock.fastForward(22_100);
-  await expect(page.getByTestId('verified-result')).toBeVisible();
-  await page.getByRole('button', {name: '확인이 필요한 경우 보기'}).click();
-  await expect(page.getByTestId('blocked-result')).toBeVisible();
-  await page.getByRole('button', {name: '직접 작성 방법 보기'}).click();
-  await expect(page.locator('.help-steps')).toBeVisible();
+  for (const scenario of [
+    {caseId: 'SYN-NORMAL-001', resultTestId: 'verified-result', modelCallCount: '1'},
+    {caseId: 'SYN-BLOCK-001', resultTestId: 'request-blocked-result', modelCallCount: '0'},
+    {caseId: 'SYN-WITHHOLD-001', resultTestId: 'response-withheld-result', modelCallCount: '1'},
+  ] as const) {
+    unexpectedRequests = [];
+    consoleMessages = [];
+    pageErrors = [];
 
-  const state = await page.evaluate(() => window.__FPG_NETWORK_POLICY_TEST__);
-  expect(unexpectedRequests).toEqual([]);
-  expect(state?.calls).toEqual([]);
-  expect(state?.storageWrites).toEqual([]);
+    await page.goto('./');
+    await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption(scenario.caseId);
+    const sourceText = await page.locator('.consultation-document > p').innerText();
+    await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+    await page.clock.fastForward(8_100);
+    await expect(page.getByTestId(scenario.resultTestId)).toBeVisible();
+    await expect(page.getByTestId('product-workspace')).toHaveAttribute(
+      'data-model-call-count',
+      scenario.modelCallCount,
+    );
+
+    const protectedText = await page.locator('.protected-text').count() === 1
+      ? await page.locator('.protected-text').innerText()
+      : null;
+    const evidenceText = await page.getByTestId('evidence-status').innerText();
+    const state = await page.evaluate(() => window.__FPG_NETWORK_POLICY_TEST__);
+    const consoleContent = (await Promise.all(consoleMessages)).join('\n');
+    const forbiddenConsoleContent = [
+      sourceText,
+      protectedText,
+    ].filter((value): value is string => Boolean(value));
+
+    expect(unexpectedRequests, scenario.caseId).toEqual([]);
+    expect(state?.apiCalls, scenario.caseId).toEqual([]);
+    expect(state?.storageWrites, scenario.caseId).toEqual([]);
+    expect(pageErrors, scenario.caseId).toEqual([]);
+    for (const value of forbiddenConsoleContent) {
+      expect(consoleContent, `${scenario.caseId}: console content leak`).not.toContain(value);
+      expect(evidenceText, `${scenario.caseId}: evidence content leak`).not.toContain(value);
+    }
+    expect(consoleContent, scenario.caseId).not.toMatch(
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|"(?:purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)"\s*:/u,
+    );
+    expect(evidenceText, scenario.caseId).not.toMatch(
+      /가상고객(?:-[A-Z]|[A-Za-z0-9_-]+)|합성(?:연락처|계좌|인증정보)-\d{3}|\[합성_(?:연락처|계좌)[^\]\r\n]*\]|\b(?:mapping|registry|chunks|protectedText|sourceText|purpose|customerRequest|employeeGuidance|itemsToConfirm|nextAction)\b/u,
+    );
+  }
+});
+
+test('flags an unreviewed same-origin dynamic JavaScript request', async ({page}) => {
+  const policy = await loadBrowserPolicy();
+  const builtIndex = readFileSync(resolve('dist/index.html'), 'utf8');
+  const findings: string[] = [];
+  page.on('request', (request) => {
+    const finding = policy.browserRequestFinding(
+      builtIndex,
+      {method: request.method(), url: request.url(), resourceType: request.resourceType()},
+      'http://127.0.0.1:4173',
+    );
+    if (finding !== null) findings.push(finding);
+  });
+
+  await page.goto('./');
+  findings.length = 0;
+  await page.evaluate(async () => {
+    const unreviewedModule = '/privacy-gateway-demo/extra.js';
+    await import(unreviewedModule).catch(() => undefined);
+  });
+
+  expect(findings).toEqual([
+    'unexpected-resource:GET:script:http://127.0.0.1:4173/privacy-gateway-demo/extra.js',
+  ]);
 });

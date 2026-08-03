@@ -3,7 +3,7 @@ import {expect, test, type Page} from '@playwright/test';
 
 async function recordingBridge(page: Page): Promise<{setFrame(frame: number): Promise<void>}> {
   await page.setViewportSize({width: 1_920, height: 1_080});
-  await page.goto('?record=1');
+  await page.goto('?record=1&case=SYN-NORMAL-001');
   await page.waitForFunction(() => '__FPG_RECORDING_V1__' in window);
   await page.evaluate(() => window.__FPG_RECORDING_V1__?.ready);
   return {
@@ -17,18 +17,29 @@ function criticalOrSerious(results: Awaited<ReturnType<AxeBuilder['analyze']>>) 
   return results.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''));
 }
 
-test('has no critical or serious axe violations in every product state', async ({page}) => {
+test('has no critical or serious axe violations in initial, processing, verified, blocked, and withheld states', async ({page}) => {
   await page.goto('./');
   expect(criticalOrSerious(await new AxeBuilder({page}).analyze())).toEqual([]);
 
   const bridge = await recordingBridge(page);
-  for (const frame of [45, 300, 480, 610, 750, 945, 975]) {
+  for (const frame of [45, 180, 360, 610, 790]) {
     await bridge.setFrame(frame);
     expect(criticalOrSerious(await new AxeBuilder({page}).analyze()), `frame ${frame}`).toEqual([]);
   }
+
+  await page.goto('./');
+  await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption('SYN-BLOCK-001');
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+  await page.waitForFunction(() => document.querySelector('[data-product-state="request-blocked"]'));
+  expect(criticalOrSerious(await new AxeBuilder({page}).analyze())).toEqual([]);
+
+  await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption('SYN-WITHHOLD-001');
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
+  await page.waitForFunction(() => document.querySelector('[data-product-state="response-withheld"]'));
+  expect(criticalOrSerious(await new AxeBuilder({page}).analyze())).toEqual([]);
 });
 
-test('keeps the primary task first in keyboard order and exposes the compact notices', async ({page}) => {
+test('puts the labeled case selector and primary action first in keyboard order', async ({page}) => {
   await page.goto('./');
   await page.evaluate(() => {
     document.body.tabIndex = -1;
@@ -36,52 +47,22 @@ test('keeps the primary task first in keyboard order and exposes the compact not
   });
 
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', {name: '상담 요약'})).toBeFocused();
+  await expect(page.getByRole('combobox', {name: '합성 사례 선택'})).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', {name: 'AI 상담 요약 만들기'})).toBeFocused();
-
-  await page.getByText('데모 안내').click();
-  await expect(page.getByText(/실제 고객정보와 금융 시스템에는 연결되지 않습니다/u)).toBeVisible();
-  await page.getByText('호스팅 안내').click();
-  await expect(page.getByText(/GitHub Pages 이용 과정/u)).toBeVisible();
+  await expect(page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'})).toBeFocused();
 });
 
-test('announces start, pause, and completion without a countdown', async ({page}) => {
+test('announces start and completion and clears the announcement after case changes', async ({page}) => {
   await page.clock.install();
   await page.goto('./');
   const liveRegion = page.getByTestId('live-region');
 
-  await expect(page.getByTestId('countdown')).toHaveCount(0);
-  await page.getByRole('button', {name: 'AI 상담 요약 만들기'}).click();
+  await page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'}).click();
   await expect(liveRegion).toContainText('보호 처리를 시작');
-  await page.clock.fastForward(22_100);
-  await expect(liveRegion).toContainText('상담 요약이 준비되었습니다');
-  await expect(page.getByRole('button', {name: '새 상담 요약'})).toBeVisible();
-});
-
-test('exposes product progress and text status without relying on color', async ({page}) => {
-  const bridge = await recordingBridge(page);
-  await bridge.setFrame(610);
-
-  const progress = page.getByRole('progressbar', {name: '단디 보호 처리 진행률'});
-  await expect(progress).toHaveAttribute('max', '899');
-  await expect(progress).toHaveAttribute('value', '610');
-  await expect(page.locator('.gateway-steps .is-active')).toContainText('전체 응답 검사');
-  await expect(page.locator('.gateway-steps .is-active')).toContainText('진행 중');
-});
-
-test('keeps every recorded product state inside the 1920x1080 stage', async ({page}) => {
-  const bridge = await recordingBridge(page);
-
-  for (const frame of [0, 45, 300, 480, 610, 750, 945, 975]) {
-    await bridge.setFrame(frame);
-    const overflow = await page.getByTestId('demo-stage').evaluate((stage) => ({
-      horizontal: stage.scrollWidth - stage.clientWidth,
-      vertical: stage.scrollHeight - stage.clientHeight,
-    }));
-    expect(overflow.horizontal, `frame ${frame}`).toBe(0);
-    expect(overflow.vertical, `frame ${frame}`).toBe(0);
-  }
+  await page.clock.fastForward(8_100);
+  await expect(liveRegion).toContainText('확인된 결과를 표시');
+  await page.getByRole('combobox', {name: '합성 사례 선택'}).selectOption('SYN-BLOCK-001');
+  await expect(liveRegion).toBeEmpty();
 });
 
 for (const viewport of [
@@ -92,7 +73,7 @@ for (const viewport of [
   {width: 767, height: 1_024},
   {width: 390, height: 844},
 ] as const) {
-  test(`keeps the product workspace bounded at ${viewport.width}x${viewport.height}`, async ({page}) => {
+  test(`keeps controls and content bounded at ${viewport.width}x${viewport.height}`, async ({page}) => {
     await page.setViewportSize(viewport);
     await page.goto('./');
 
@@ -104,41 +85,85 @@ for (const viewport of [
     expect(documentMetrics.bodyWidth).toBeLessThanOrEqual(documentMetrics.viewportWidth);
     expect(documentMetrics.documentWidth).toBeLessThanOrEqual(documentMetrics.viewportWidth);
 
-    const button = viewport.width < 768
-      ? page.getByRole('button', {name: '다음 상태'})
-      : page.getByRole('button', {name: 'AI 상담 요약 만들기'});
-    const buttonBounds = await button.boundingBox();
-    expect(buttonBounds).not.toBeNull();
-    expect(buttonBounds!.height).toBeGreaterThanOrEqual(44);
-
-    const panels = await page.locator('.product-panel').evaluateAll((elements) =>
-      elements.map((element) => {
-        const rect = element.getBoundingClientRect();
-        return {left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom};
-      }),
-    );
-    for (const panel of panels) {
-      expect(panel.left).toBeGreaterThanOrEqual(-1);
-      expect(panel.right).toBeLessThanOrEqual(viewport.width + 1);
+    for (const control of await page.locator('button, select, summary').all()) {
+      const bounds = await control.boundingBox();
+      expect(bounds, await control.getAttribute('aria-label') ?? await control.textContent() ?? 'control').not.toBeNull();
+      expect(bounds!.height).toBeGreaterThanOrEqual(44);
     }
-    for (let index = 0; index < panels.length; index += 1) {
-      for (let candidate = index + 1; candidate < panels.length; candidate += 1) {
-        const first = panels[index];
-        const second = panels[candidate];
-        const overlaps = first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
-        expect(overlaps, `panels ${index} and ${candidate}`).toBe(false);
-      }
+
+    if (viewport.width < 768) {
+      await expect(page.getByTestId('manual-step')).toHaveText('1/5');
+      await expect(page.getByRole('button', {name: '다음 단계'})).toBeVisible();
+      await expect(page.getByRole('button', {name: '개인정보 보호 후 요약 만들기'})).toHaveCount(0);
     }
   });
 }
 
-test('uses static state changes when reduced motion is requested', async ({page}) => {
+test('uses five-step manual progression when reduced motion is requested', async ({page}) => {
   await page.emulateMedia({reducedMotion: 'reduce'});
   await page.goto('./');
 
-  const animationNames = await page.locator('.gateway-orbit--outer').evaluate((element) =>
-    getComputedStyle(element).animationName,
+  await expect(page.getByTestId('manual-step')).toHaveText('1/5');
+  await page.getByRole('button', {name: '다음 단계'}).click();
+  await expect(page.getByTestId('manual-step')).toHaveText('2/5');
+  await page.getByRole('button', {name: '다음 단계'}).click();
+  await expect(page.getByTestId('manual-step')).toHaveText('3/5');
+  await page.getByRole('button', {name: '다음 단계'}).click();
+  await expect(page.getByTestId('manual-step')).toHaveText('4/5');
+  await page.getByRole('button', {name: '다음 단계'}).click();
+  await expect(page.getByTestId('manual-step')).toHaveText('5/5');
+  await expect(page.getByTestId('verified-result')).toBeVisible();
+});
+
+test('exposes visible focus and minimum readable helper and body text tokens', async ({page}) => {
+  await page.goto('./');
+  const selector = page.getByRole('combobox', {name: '합성 사례 선택'});
+  await selector.focus();
+  const focusStyle = await selector.evaluate((element) => getComputedStyle(element));
+  expect(focusStyle.outlineStyle).not.toBe('none');
+
+  const sizes = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      helper: Number.parseFloat(root.getPropertyValue('--font-helper')),
+      body: Number.parseFloat(root.getPropertyValue('--font-body')),
+    };
+  });
+  expect(sizes.helper).toBeGreaterThanOrEqual(12);
+  expect(sizes.body).toBeGreaterThanOrEqual(14);
+});
+
+test('renders protected request and verified result values at body text size', async ({page}) => {
+  const bridge = await recordingBridge(page);
+
+  await bridge.setFrame(180);
+  const protectedTextSize = await page.locator('.protected-text').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
   );
-  expect(animationNames).toBe('none');
-  await expect(page.getByRole('button', {name: '다음 상태'})).toBeVisible();
+  expect(protectedTextSize).toBeGreaterThanOrEqual(14);
+
+  await bridge.setFrame(790);
+  const verifiedValueSize = await page
+    .locator('[data-testid="verified-result"] dl > div > dd:not(.result-evidence)')
+    .first()
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(verifiedValueSize).toBeGreaterThanOrEqual(14);
+});
+
+test('keeps the invalid bootstrap alert accessible and bounded on a narrow screen', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('./?record=1&case=SYN-UNKNOWN-001');
+
+  const alert = page.getByRole('alert');
+  await expect(alert.getByRole('heading', {name: '검수된 시연 데이터를 확인하지 못했어요'})).toBeVisible();
+  await expect(alert.getByRole('button', {name: '처음부터 다시 시작'})).toBeVisible();
+  expect(criticalOrSerious(await new AxeBuilder({page}).analyze())).toEqual([]);
+
+  const widths = await page.evaluate(() => ({
+    body: document.body.scrollWidth,
+    document: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }));
+  expect(widths.body).toBeLessThanOrEqual(widths.viewport);
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
 });

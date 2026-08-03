@@ -26,7 +26,13 @@ type ReleasePolicy = {
     rule: string;
     line: number;
   }>;
+  browserRequestFinding: (
+    indexHtml: string,
+    request: {method: string; url: string; resourceType: string},
+    expectedOrigin: string,
+  ) => string | null;
   hashSourceEntries: (entries: Array<{path: string; bytes: Buffer}>) => string;
+  isAllowedRepositoryPath: (path: string) => boolean;
   isAllowedSourcePath: (path: string) => boolean;
   scanText: (file: string, source: string) => Array<{
     file: string;
@@ -55,6 +61,36 @@ function readOrEmpty(path: string): string {
 }
 
 describe('public release policy', () => {
+  it('allows only the exact built document, assets, fonts, and favicon', async () => {
+    const policy = await loadReleasePolicy();
+    const html = `
+      <link rel="icon" href="/privacy-gateway-demo/favicon.svg" />
+      <script src="/privacy-gateway-demo/assets/index-reviewed.js"></script>
+      <link rel="stylesheet" href="/privacy-gateway-demo/assets/index-reviewed.css" />
+    `;
+    const request = (url: string, resourceType: string, method = 'GET') =>
+      policy.browserRequestFinding(
+        html,
+        {method, url, resourceType},
+        'http://127.0.0.1:4173',
+      );
+
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/', 'document')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js', 'script')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.css', 'stylesheet')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/fonts/PrivacyDemoSans-Regular.woff2', 'font')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/fonts/PrivacyDemoSans-Bold.woff2', 'font')).toBeNull();
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/favicon.svg', 'image')).toBeNull();
+
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/extra.js', 'script')).toBe(
+      'unexpected-resource:GET:script:http://127.0.0.1:4173/privacy-gateway-demo/extra.js',
+    );
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js?next=1', 'script')).toMatch(/^unexpected-resource:/u);
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/assets/index-reviewed.js', 'image')).toMatch(/^unexpected-resource:/u);
+    expect(request('https://example.invalid/privacy-gateway-demo/assets/index-reviewed.js', 'script')).toMatch(/^unexpected-resource:/u);
+    expect(request('http://127.0.0.1:4173/privacy-gateway-demo/', 'document', 'POST')).toMatch(/^unexpected-resource:/u);
+  });
+
   it('selects the actual license filename independently of filesystem case rules', async () => {
     const notices = await loadNoticeModule();
     expect(notices.selectLicenseFile(['package.json', 'license', 'readme.md'])).toBe('license');
@@ -138,6 +174,15 @@ describe('public release policy', () => {
     expect(existsSync('scripts/render-video.mjs')).toBe(false);
     expect(pkg.scripts.verify).toContain('npm run record:check');
     expect(pkg.scripts['release:notices']).toBe('node scripts/make-third-party-notices.mjs');
+  });
+
+  it('does not mutate pointer or hover state after the recording bridge settles a frame', () => {
+    for (const path of [
+      'scripts/capture-frames.mjs',
+      'tests/visual/demo-frames.spec.ts',
+    ]) {
+      expect(readFileSync(path, 'utf8'), path).not.toContain('.mouse.move(');
+    }
   });
 
   it('disables the unused module-preload fetch polyfill and source maps', () => {
@@ -229,11 +274,25 @@ describe('public release policy', () => {
     const policy = await loadReleasePolicy();
 
     expect(policy.isAllowedSourcePath('src/app/App.tsx')).toBe(true);
-    expect(
-      policy.isAllowedSourcePath('artifacts/regression/07-type-protection-detail.png'),
-    ).toBe(true);
-    expect(policy.isAllowedSourcePath('artifacts/regression/08-explicit-block.png')).toBe(true);
-    expect(policy.isAllowedSourcePath('artifacts/regression/09-unreviewed.png')).toBe(false);
+    expect(policy.isAllowedSourcePath('src/prototype/run.ts')).toBe(true);
+    expect(policy.isAllowedSourcePath('tests/components/state-surfaces.test.tsx')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/06-request-blocked.png')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/07-response-withheld.png')).toBe(true);
+    expect(policy.isAllowedSourcePath('artifacts/regression/07-type-protection-detail.png')).toBe(false);
+    expect(policy.isAllowedSourcePath('artifacts/regression/08-explicit-block.png')).toBe(false);
+    for (const file of [
+      '01-synthetic-source.png',
+      '02-type-protection.png',
+      '03-local-mock-summary.png',
+      '04-full-response-inspection.png',
+      '05-verified-result.png',
+      '06-request-blocked.png',
+      '07-response-withheld.png',
+    ]) {
+      expect(policy.isAllowedRepositoryPath(`artifacts/submission/${file}`), file).toBe(true);
+    }
+    expect(policy.isAllowedRepositoryPath('artifacts/submission/01-unreviewed.png')).toBe(false);
+    expect(policy.isAllowedRepositoryPath('artifacts/submission/08-unreviewed.png')).toBe(false);
     expect(policy.isAllowedSourcePath('.superpowers/sdd/report.md')).toBe(false);
     expect(policy.isAllowedSourcePath('AGENTS.md')).toBe(false);
 
@@ -300,9 +359,9 @@ describe('public release policy', () => {
   it('documents the local-only deployment boundary and Darwin visual baseline limit', () => {
     const readme = readOrEmpty('README.md');
 
-    expect(readme).toContain('GitHub Pages 배포는 자동으로 실행되지 않습니다');
+    expect(readme).toContain('GitHub Pages 배포는 자동으로 시작되지 않습니다');
     expect(readme).toContain('macOS에서 생성한 검토 기준 이미지');
-    expect(readme).toContain('제품 성능이나 운영 보안 검증 결과를 뜻하지 않습니다');
-    expect(readme).toContain('GitHub가 접속 IP 등 사용 정보를 처리할 수 있습니다');
+    expect(readme).toContain('실제 제품 성능이나 운영 보안을 검증한 결과도 아닙니다');
+    expect(readme).toContain('GitHub가 접속 IP 등 방문 정보를 처리할 수');
   });
 });
