@@ -91,7 +91,7 @@ test('runs the five engine stages and publishes exactly five verified fields', a
     '직원이 확인할 항목',
     '다음 조치',
   ]);
-  await expect(page.getByTestId('evidence-status')).toContainText('원문 내용 저장 없음');
+  await expect(page.getByTestId('evidence-status')).toContainText('브라우저 저장소 쓰기 없음');
 });
 
 test('blocks an unsupported request before the local mock summary', async ({page}) => {

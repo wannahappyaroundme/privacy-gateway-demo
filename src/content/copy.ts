@@ -270,7 +270,7 @@ export const COPY = {
   finalFlow: ['요청 정보 보호', '승인 경로', '전체 응답 검사', '확인된 결과 공개'],
   evidence: {
     storageLabel: '저장 상태',
-    storageValue: '원문 내용 저장 없음',
+    storageValue: '브라우저 저장소 쓰기 없음',
     serverLabel: '서버 연결',
     serverValue: '연결 없음',
     externalLabel: '외부 AI 연결',

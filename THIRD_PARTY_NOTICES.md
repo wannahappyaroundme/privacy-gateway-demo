@@ -15,7 +15,7 @@ The two local WOFF2 files are modified, renamed, static subsets of the official 
 - Conversion tool: `fonttools 4.60.2`
 - WOFF2 encoder dependency: `Brotli 1.1.0`, installed only in the temporary conversion environment
 - Rendered glyph source: every string value in `src/content/copy.ts` and `src/demo/fixtures/synthetic-cases-v2.json`, deduplicated as UTF-8 code points
-- Glyph set: `303` unique UTF-8 code points, SHA-256 `e17ee65150c13c3c7d7fdf5be648849e578aa0eb1138aa3aeba2859653d33b03`
+- Glyph set: `305` unique UTF-8 code points, SHA-256 `200ecd81169f6ff9b972c9d6f504788acdb4ebffe411a13a93b168dc0bca462f`
 
 Repository-owned conversion helpers:
 
@@ -59,8 +59,8 @@ Exact Build B instancing, renaming, and subset commands:
 
 Output SHA-256:
 
-- `PrivacyDemoSans-Regular.woff2`: `bdefa1c3069ef8a1d6d64cf865bd4ae9b7c2ea7b53c70af881b19b21eff25c88`
-- `PrivacyDemoSans-Bold.woff2`: `abe1552df4c9ef1cc6ccaeec1ce44cecc8e4b5058ea1048b3c5f80531c8abeb4`
+- `PrivacyDemoSans-Regular.woff2`: `d484fac1a65385d6b1285a766902fc029f32213e13123ec14d6bd6f86b260a7e`
+- `PrivacyDemoSans-Bold.woff2`: `36950da8b21111e27f25aa192a47f75abe3b3078a03b9ad0a74eb75cea906ad3`
 
 Compare the A and B outputs byte-for-byte before copying the reviewed A files into the repository:
 

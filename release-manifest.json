@@ -2,8 +2,8 @@
   "schemaVersion": "1.0",
   "status": "local-preflight-only",
   "fixtureSha256": "a63610b6dc612453e7cb3330e79a52afd2805e05ad05282b9ef254f163dd6806",
-  "copySha256": "c232224f87f815161084b492fb07bf6bb8ff934552c30b365a021ddcfbe83547",
-  "approvedSourceSha256": "557d213f990715d7cee813ccb48c7677924f10444c44117bd2b1b1e5a0a4584c",
+  "copySha256": "f0936bd10b35a0af4880b6db69895dfa3f5f5983bbfdf2451d8c199734362b44",
+  "approvedSourceSha256": "32d8f2eb387110affbf7818e3a3c7f8a0de2fca714a460460051f42d35bd530b",
   "reviewer": null,
   "approvedAt": null
 }
