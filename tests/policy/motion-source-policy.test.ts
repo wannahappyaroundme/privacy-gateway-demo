@@ -7,6 +7,7 @@ import {describe, expect, it} from 'vitest';
 import {
   findMotionPolicyViolations,
   findPrototypeSourcePolicyViolations,
+  findReviewedPrototypeGraphViolations,
 } from './motion-source-policy';
 
 const ALLOWED_WRAPPER = `
@@ -200,283 +201,133 @@ describe('Motion source policy analyzer', () => {
 });
 
 describe('functional prototype source policy', () => {
-  it.each([
-    [
-      'relative imported request helper',
-      `import {request} from '../helper'; request('/api');`,
-      'prototype-import:relative-or-out-of-bound',
-    ],
-    [
-      'callable function parameter',
-      `(request: (path: string) => unknown) => request('/api');`,
-      'prototype-call:parameter',
-    ],
-    [
-      'absolute dynamic import',
-      `import('/privacy-gateway-demo/extra.js');`,
-      'prototype-import:dynamic',
-    ],
-    [
-      'Function constructor call result',
-      `Function('return fetch')()('/api');`,
-      'prototype-call:dynamic-callee',
-    ],
-    [
-      'direct eval',
-      `eval("fetch('/api')");`,
-      'prototype-code-generation:eval',
-    ],
-    [
-      'new Function constructor',
-      `new Function("return fetch('/api')");`,
-      'prototype-code-generation:Function',
-    ],
-    [
-      'side-effect import',
-      `import '@/prototype/inspect';`,
-      'prototype-import:side-effect',
-    ],
-    [
-      'out-of-bound application import',
-      `import {run} from '@/app/run'; run();`,
-      'prototype-import:relative-or-out-of-bound',
-    ],
-    [
-      'unreviewed external import',
-      `import axios from 'axios'; axios.get('/api');`,
-      'prototype-import:external',
-    ],
-    [
-      'unresolved callable alias',
-      `const request = unknownRequest; request('/api');`,
-      'prototype-call:unresolved-alias',
-    ],
-    [
-      'method call through a structural function parameter',
-      `(request: {get(path: string): unknown}) => request.get('/api');`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'pure-method-name call through a structural function parameter',
-      `(request: {map(callback: () => unknown): unknown}) => request.map(() => undefined);`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'method call through an unresolved receiver',
-      `unknownClient.get('/api');`,
-      'prototype-call:unresolved-receiver',
-    ],
-    [
-      'pure-method-name call on an unreviewed local factory result',
-      `function client() { return {get: (path: string) => path}; } client().get('/api');`,
-      'prototype-call:unreviewed-receiver',
-    ],
-    [
-      'shadowed String builtin name',
-      `(String: (value: string) => unknown) => String('/api');`,
-      'prototype-call:parameter',
-    ],
-    [
-      'shadowed JSON builtin receiver',
-      `(JSON: {parse(value: string): unknown}) => JSON.parse('/api');`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'shadowed Map constructor name',
-      `(Map: new () => unknown) => new Map();`,
-      'prototype-constructor:unreviewed',
-    ],
-    [
-      'asserted Map receiver type',
-      `(request: unknown) => (request as Map<string, string>).get('/api');`,
-      'prototype-call:asserted-receiver',
-    ],
-    [
-      'callable tagged-template parameter',
-      `(request: (value: TemplateStringsArray) => unknown) => request\`/api\`;`,
-      'prototype-call:tagged-template',
-    ],
-    [
-      'ambient function declaration',
-      `declare function request(path: string): unknown; request('/api');`,
-      'prototype-call:ambient-declaration',
-    ],
-    [
-      'shadowed Object builtin receiver',
-      `(Object: {values(value: unknown): unknown}) => Object.values('/api');`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'shadowed Math builtin receiver',
-      `(Math: {imul(left: number, right: number): number}) => Math.imul(1, 2);`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'shadowed reviewed constructors',
-      `(Error: new () => unknown, RegExp: new () => unknown, Set: new () => unknown) => [new Error(), new RegExp(), new Set()];`,
-      'prototype-constructor:unreviewed',
-    ],
-    [
-      'non-null structural parameter receiver',
-      `(request: {get(path: string): unknown} | null) => request!.get('/api');`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'asserted constructor expression',
-      `(request: unknown) => new (request as new () => unknown)();`,
-      'prototype-constructor:unreviewed',
-    ],
-    [
-      'asserted receiver alias',
-      `(request: unknown) => { const client = request as Map<string, string>; return client.get('/api'); };`,
-      'prototype-call:asserted-receiver',
-    ],
-    [
-      'ambient typed receiver alias',
-      `declare const client: Map<string, string>; client.get('/api');`,
-      'prototype-call:unreviewed-receiver',
-    ],
-    [
-      'locally shadowed Map receiver type',
-      `class Map { get(path: string) { return path; } } (client: Map) => client.get('/api');`,
-      'prototype-call:parameter-receiver',
-    ],
-    [
-      'optional callable parameter',
-      `(request?: (path: string) => unknown) => request?.('/api');`,
-      'prototype-call:parameter',
-    ],
-    [
-      'non-null callable parameter',
-      `(request: ((path: string) => unknown) | null) => request!('/api');`,
-      'prototype-call:dynamic-callee',
-    ],
-    [
-      'Function call method indirection',
-      `(request: (path: string) => unknown) => request.call(undefined, '/api');`,
-      'prototype-call:unreviewed-method:call',
-    ],
-    [
-      'Reflect apply indirection',
-      `(request: (path: string) => unknown) => Reflect.apply(request, undefined, ['/api']);`,
-      'prototype-call:unreviewed-method:apply',
-    ],
-  ])('rejects %s through the closed dependency and call graph', (_name, source, rule) => {
-    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual(
-      expect.arrayContaining([expect.objectContaining({rule})]),
+  const reviewedFiles = [
+    'src/prototype/contracts.ts',
+    'src/prototype/inspect.ts',
+    'src/prototype/mockModel.ts',
+    'src/prototype/protect.ts',
+    'src/prototype/run.ts',
+  ] as const;
+  const reviewedEntries = () => reviewedFiles.map((file) => ({
+    file,
+    source: readFileSync(resolve(file), 'utf8'),
+  }));
+  const runSource = () => readFileSync(resolve('src/prototype/run.ts'), 'utf8');
+  it('accepts only the exact reviewed five-file prototype graph', () => {
+    expect(findReviewedPrototypeGraphViolations(reviewedEntries())).toEqual([]);
+  });
+
+  it.each(reviewedFiles)('rejects any byte mutation of sealed %s', (file) => {
+    const source = `${readFileSync(resolve(file), 'utf8')}\n// unreviewed mutation\n`;
+
+    expect(findPrototypeSourcePolicyViolations(source, file)).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-source-seal'})]),
     );
   });
 
-  it('allows reviewed prototype imports, zod calls, local functions, and pure methods', () => {
-    const source = `
-      import {z} from 'zod';
-      import {inspectResponse} from '@/prototype/inspect';
-      const schema = z.object({value: z.string()}).strict();
-      function normalize(values: readonly string[]) {
-        return values.map((value) => value.trim()).join('');
-      }
-      export const run = (input: {chunks: readonly string[]}) => {
-        normalize(input.chunks);
-        schema.parse({value: 'ok'});
-        return inspectResponse(input as never);
-      };
-    `;
-
-    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual([]);
-  });
-
-  it.each([
-    ['fetch', `export const run = () => fetch('/api');`],
-    ['XMLHttpRequest', 'export const run = () => new XMLHttpRequest();'],
-    ['WebSocket', `export const run = () => new WebSocket('wss://example.invalid');`],
-    ['EventSource', `export const run = () => new EventSource('/events');`],
-    ['sendBeacon', `export const run = () => navigator.sendBeacon('/audit');`],
-    ['localStorage write', `export const run = () => localStorage.setItem('key', 'value');`],
-    ['sessionStorage write', `export const run = () => sessionStorage.clear();`],
-    ['IndexedDB write', `export const run = () => indexedDB.open('demo');`],
-    ['Cache API write', `export const run = () => caches.open('demo');`],
-    ['service worker registration', `export const run = () => navigator.serviceWorker.register('/sw.js');`],
-    ['wall-clock shortcut', 'export const run = () => Date.now();'],
-    ['random shortcut', 'export const run = () => Math.random();'],
-  ])('rejects %s in prototype engine source', (_name, source) => {
-    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).not.toEqual([]);
-  });
-
-  it.each([
-    [
-      'computed global fetch',
-      `export const run = () => globalThis['fe' + 'tch']('/api');`,
-      'prototype-computed-access:globalThis',
-    ],
-    [
-      'computed navigator beacon',
-      `export const run = () => navigator['send' + 'Beacon']('/audit');`,
-      'prototype-computed-access:navigator',
-    ],
-    [
-      'computed document cookie',
-      `export const run = () => document['coo' + 'kie'];`,
-      'prototype-computed-access:document',
-    ],
-    [
-      'computed wall clock',
-      `export const run = () => Date['no' + 'w']();`,
-      'prototype-computed-access:Date',
-    ],
-    [
-      'computed random source',
-      `export const run = () => Math['ran' + 'dom']();`,
-      'prototype-computed-access:Math',
-    ],
-    [
-      'dynamic computed global key',
-      `export const run = (key: string) => globalThis[key]('/api');`,
-      'prototype-computed-access:globalThis',
-    ],
-    [
-      'nested computed service worker access',
-      `export const run = () => navigator['service' + 'Worker']['register']('/sw.js');`,
-      'prototype-computed-access:navigator',
-    ],
-    [
-      'joined external provider brand',
-      `export const provider = ['Open', 'AI'].join('');`,
-      'prototype-dynamic-string:forbidden-content',
-    ],
-    [
-      'concatenated actual-looking phone',
-      `export const identifier = '010-' + '1234-5678';`,
-      'prototype-dynamic-string:forbidden-content',
-    ],
-    [
-      'partly dynamic forbidden-name concatenation',
-      `export const provider = (suffix: string) => 'Open' + suffix;`,
-      'prototype-dynamic-string:concatenation',
-    ],
-    [
-      'partly dynamic array join',
-      `export const provider = (separator: string) => ['Open', 'AI'].join(separator);`,
-      'prototype-dynamic-string:array-join',
-    ],
-    [
-      'aliased fetch identifier',
-      `const request = fetch; export const run = () => request('/api');`,
-      'prototype-forbidden-identifier:fetch',
-    ],
-    [
-      'aliased Date object',
-      `const clock = Date; export const run = () => clock['now']();`,
-      'prototype-forbidden-identifier:Date',
-    ],
-    [
-      'aliased Math object',
-      `const randomSource = Math; export const run = () => randomSource['random']();`,
-      'prototype-global-object:Math',
-    ],
-  ])('rejects %s bypass syntax', (_name, source, expectedRule) => {
-    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/run.ts')).toEqual(
-      expect.arrayContaining([expect.objectContaining({rule: expectedRule})]),
+  it('rejects a new or deleted prototype source file', () => {
+    expect(findReviewedPrototypeGraphViolations(reviewedEntries().slice(1))).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-inventory:missing-file'})]),
     );
+    expect(findReviewedPrototypeGraphViolations([
+      ...reviewedEntries(),
+      {file: 'src/prototype/extra.ts', source: 'export const extra = true;'},
+    ])).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-inventory:unexpected-file'})]),
+    );
+    expect(findReviewedPrototypeGraphViolations([...reviewedEntries(), reviewedEntries()[0]])).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-inventory:duplicate-file'})]),
+    );
+  });
+
+  it('rejects changed import edges and bindings independently of the source seal', () => {
+    const source = readFileSync(resolve('src/prototype/inspect.ts'), 'utf8').replace(
+      `import {z} from 'zod';`,
+      `import {z} from 'unreviewed';`,
+    );
+
+    expect(findPrototypeSourcePolicyViolations(source, 'src/prototype/inspect.ts')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({rule: 'prototype-source-seal'}),
+        expect.objectContaining({rule: 'prototype-import-ledger'}),
+      ]),
+    );
+  });
+
+  it.each([
+    ['relative imported request helper', `import {request} from '../helper'; request('/api');`],
+    ['callable function parameter', `(request: (path: string) => unknown) => request('/api');`],
+    ['absolute dynamic import', `import('/privacy-gateway-demo/extra.js');`],
+    ['Function constructor result', `Function('return fetch')()('/api');`],
+    ['direct eval', `eval("fetch('/api')");`],
+    ['new Function', `new Function("return fetch('/api')");`],
+    ['side-effect import', `import '@/prototype/inspect';`],
+    ['unresolved alias', `const request = unknownRequest; request('/api');`],
+    ['parameter method', `(request: {get(path: string): unknown}) => request.get('/api');`],
+    ['unresolved receiver', `unknownClient.get('/api');`],
+    ['shadowed String', `(String: (value: string) => unknown) => String('/api');`],
+    ['shadowed JSON', `(JSON: {parse(value: string): unknown}) => JSON.parse('/api');`],
+    ['shadowed Map', `(Map: new () => unknown) => new Map();`],
+    ['asserted receiver', `(request: unknown) => (request as Map<string, string>).get('/api');`],
+    ['tagged template', `(request: (value: TemplateStringsArray) => unknown) => request\`/api\`;`],
+    ['ambient function', `declare function request(path: string): unknown; request('/api');`],
+    ['Function.call', `(request: (path: string) => unknown) => request.call(undefined, '/api');`],
+    ['Reflect.apply', `(request: (path: string) => unknown) => Reflect.apply(request, undefined, ['/api']);`],
+    ['mutable String', `(request: typeof String) => { String = request; return String('/api'); };`],
+    ['mutable JSON.parse', `(request: typeof JSON.parse) => { JSON.parse = request; return JSON.parse('/api'); };`],
+    ['mutable Object.values', `(request: typeof Object.values) => { Object.values = request; return Object.values('/api'); };`],
+    ['mutable Math.imul', `(request: typeof Math.imul) => { Math.imul = request; return Math.imul(1, 2); };`],
+    ['mutable Map prototype', `(request: typeof Map.prototype.get) => { Map.prototype.get = request; return new Map().get('/api'); };`],
+    ['mutable local Map method', `(request: (path: string) => unknown) => { const client = new Map<string, unknown>(); client.get = request; return client.get('/api'); };`],
+    ['JSX component invocation', `const View = () => <Request />;`],
+    ['decorator invocation', `@request class Example {}`],
+  ])('rejects the sealed source when %s is inserted', (_name, inserted) => {
+    expect(
+      findPrototypeSourcePolicyViolations(`${runSource()}\n${inserted}\n`, 'src/prototype/run.ts'),
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-source-seal'})]),
+    );
+  });
+
+  it.each([
+    ['call', `unknownClient('/api');`],
+    ['constructor', `new Worker('/worker.js');`],
+    ['assignment', `client.get = request;`],
+    ['update', `counter++;`],
+    ['dynamic import', `import('/privacy-gateway-demo/extra.js');`],
+    ['tagged template', `request\`/api\`;`],
+    ['JSX', `const View = () => <Request />;`],
+    ['decorator', `@request class Example {}`],
+    ['implicit iterator', `for (const value of request) { void value; }`],
+    ['implicit spread', `const copied = [...request];`],
+    ['implicit await', `async function waitForRequest() { await request; }`],
+    ['implicit yield delegation', `function* delegateRequest() { yield* request; }`],
+    ['implicit delete', `delete request.value;`],
+    ['implicit in check', `'value' in request;`],
+    ['implicit instanceof check', `request instanceof Example;`],
+    ['implicit inheritance', `class Derived extends request {}`],
+    ['implicit computed property', `const keyed = {[request]: true};`],
+    ['implicit getter', `const readable = { get request() { return 1; } };`],
+    ['implicit setter', `const writable = { set request(value: number) { void value; } };`],
+    ['implicit class static block', `class StaticRequest { static { request; } }`],
+  ])('rejects a new %s operation independently of the source seal', (_name, operation) => {
+    expect(
+      findPrototypeSourcePolicyViolations(`${runSource()}\n${operation}\n`, 'src/prototype/run.ts'),
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({rule: 'prototype-operation-ledger'})]),
+    );
+  });
+
+  it.each([
+    ['fetch', `fetch('/api');`, 'prototype-network:fetch'],
+    ['storage', `localStorage.setItem('key', 'value');`, 'prototype-storage:web-storage'],
+    ['wall clock', `Date.now();`, 'prototype-nondeterminism:wall-clock'],
+    ['random', `Math.random();`, 'prototype-nondeterminism:random'],
+    ['code generation', `eval('1');`, 'prototype-code-generation:eval'],
+  ])('keeps the simple direct %s ban beside the seal', (_name, inserted, rule) => {
+    expect(
+      findPrototypeSourcePolicyViolations(`${runSource()}\n${inserted}\n`, 'src/prototype/run.ts'),
+    ).toEqual(expect.arrayContaining([expect.objectContaining({rule})]));
   });
 
   it.each(['expectedOutcome', 'verifiedResult', 'mockResponse'])(
@@ -528,17 +379,15 @@ describe('functional prototype source policy', () => {
     }
   });
 
-  it('keeps every prototype engine and the reviewed v2 fixture inside the static boundary', () => {
-    const prototypeViolations = collectSourceFiles(resolve('src/prototype')).flatMap((path) =>
-      findPrototypeSourcePolicyViolations(readFileSync(path, 'utf8'), path),
-    );
+  it('keeps the reviewed graph and v2 fixture inside the static boundary', () => {
     const fixturePath = resolve('src/demo/fixtures/synthetic-cases-v2.json');
     const fixtureViolations = findPrototypeSourcePolicyViolations(
       readFileSync(fixturePath, 'utf8'),
       fixturePath,
     );
 
-    expect([...prototypeViolations, ...fixtureViolations]).toEqual([]);
+    expect(findReviewedPrototypeGraphViolations(reviewedEntries())).toEqual([]);
+    expect(fixtureViolations).toEqual([]);
   });
 });
 
