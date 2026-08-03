@@ -208,9 +208,9 @@ describe('functional prototype source policy', () => {
     'src/prototype/protect.ts',
     'src/prototype/run.ts',
   ] as const;
-  const reviewedEntries = () => reviewedFiles.map((file) => ({
+  const reviewedEntries = () => collectSourceFiles(resolve('src/prototype')).map((file) => ({
     file,
-    source: readFileSync(resolve(file), 'utf8'),
+    source: readFileSync(file, 'utf8'),
   }));
   const runSource = () => readFileSync(resolve('src/prototype/run.ts'), 'utf8');
   it('accepts only the exact reviewed five-file prototype graph', () => {
