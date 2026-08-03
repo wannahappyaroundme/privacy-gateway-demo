@@ -5,6 +5,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {BootstrapMessage} from '@/app/App';
 import {BlockedResultPanel} from '@/components/BlockedResultPanel';
 import {COPY} from '@/content/copy';
+import {protectedTextForDisplay} from '@/prototype/protect';
 
 function seriousOrCritical(results: axe.AxeResults) {
   return results.violations.filter(({impact}) => impact === 'serious' || impact === 'critical');
@@ -65,5 +66,22 @@ describe('bootstrap and recovery state surfaces', () => {
       expect(within(status).getByRole('button', {name: action})).toBeVisible();
     }
     await expectNoSeriousOrCritical(container);
+  });
+});
+
+describe('protected display lifecycle', () => {
+  it('does not create protection state while the protected comparison is hidden', () => {
+    expect(protectedTextForDisplay('', false)).toBeUndefined();
+  });
+
+  it('clears the display-only registry before returning the protected string', () => {
+    const clear = vi.spyOn(Map.prototype, 'clear');
+    const sourceText =
+      '가상고객-A님이 합성연락처-001로 연락해 합성계좌-001 확인을 요청했습니다.';
+
+    expect(protectedTextForDisplay(sourceText, true)).toBe(
+      '가상고객A님이 [합성_연락처_01]로 연락해 [합성_계좌_01] 확인을 요청했습니다.',
+    );
+    expect(clear).toHaveBeenCalledTimes(1);
   });
 });

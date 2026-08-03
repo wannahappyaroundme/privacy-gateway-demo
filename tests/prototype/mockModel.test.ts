@@ -33,6 +33,7 @@ describe('deterministic protected-text mock summarizer', () => {
       'itemsToConfirm',
       'nextAction',
     ]);
+    expect(JSON.parse(first.canonicalJson).purpose).toBe('자동이체 오류 확인과 처리 결과 안내');
   });
 
   it('mutates exactly one account marker without generating raw synthetic grammar or financial advice', () => {

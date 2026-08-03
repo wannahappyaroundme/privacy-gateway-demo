@@ -169,3 +169,14 @@ export function protectDetectedSpans(
 export function protectSyntheticText(sourceText: string): ProtectionResult {
   return protectDetectedSpans(sourceText, detectSyntheticIdentifiers(sourceText));
 }
+
+export function protectedTextForDisplay(sourceText: string, visible: boolean): string | undefined {
+  if (!visible) return undefined;
+  const protection = protectSyntheticText(sourceText);
+
+  try {
+    return protection.protectedText;
+  } finally {
+    if (protection.registry instanceof Map) protection.registry.clear();
+  }
+}

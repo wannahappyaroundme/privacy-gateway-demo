@@ -25,13 +25,15 @@ type ReviewedSource = Readonly<{
 // Any source, dependency, or operation change requires a new seal and ledger review.
 const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
   'src/prototype/contracts.ts': {
-    sha256: 'dfe790c32f10cb949ca2e11a62782103c7fe700e1896a59a7ec075f61c26d2e8',
+    sha256: 'b7079459755b30864bca1bdd42848eb31bd0248256279eb8c6158d9ddf66e091',
     imports: [],
-    operations: {},
+    operations: {
+      'call:SYNTHETIC_REQUEST_PURPOSE.exec:direct:1': 1,
+    },
   },
   'src/prototype/inspect.ts': {
-    sha256: '73c37bb84aef2333c6ad01a846d2ccd072b871653fc3836ab30b007f7f644107',
-    imports: ['zod|value:z'],
+    sha256: '741fcee254de0d4e5b06c01fbb68182adfcde0030942da7ec1de08807b443cc2',
+    imports: ['zod|value:z', '@/prototype/contracts|value:extractSyntheticRequestPurpose'],
     operations: {
       'assign:=:checks[]': 6,
       'assign:=:fields': 1,
@@ -45,8 +47,8 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
       'call:SUMMARY_SENTENCE.exec:direct:1': 1,
       'call:array.sort:direct:0': 1,
       'call:checkList:direct:0': 1,
-      'call:customerRequest.match:direct:1': 1,
       'call:expected.every:direct:1': 1,
+      'call:extractSyntheticRequestPurpose:direct:1': 1,
       'call:failAt:direct:2': 5,
       'call:fixedProfileOutputIsApproved:direct:1': 1,
       'call:input.chunks.join:direct:1': 1,
@@ -71,8 +73,8 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
     },
   },
   'src/prototype/mockModel.ts': {
-    sha256: '2a673ec8efae7c5664a6a8d230af0e019b2d323c7851a72a2bec1e8772d75136',
-    imports: ['@/prototype/contracts|type:MockBehavior'],
+    sha256: '1f79a5f04c2f1c495eaa18b622751961f726970a25a9cc00dde78fa2259c79e8',
+    imports: ['@/prototype/contracts|type:MockBehavior,value:extractSyntheticRequestPurpose'],
     operations: {
       'assign:+=:index': 1,
       'assign:+=:offset': 1,
@@ -95,7 +97,7 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
       'call:chunks.join:direct:1': 1,
       'call:chunks.push:direct:1': 1,
       'call:createSummary:direct:1': 1,
-      'call:customerRequest.match:direct:1': 1,
+      'call:extractSyntheticRequestPurpose:direct:1': 1,
       'call:fnv1a32:direct:1': 1,
       'call:forcedReassemblyBoundary:direct:1': 1,
       'call:mutateOneAccountMarker:direct:1': 1,
@@ -110,7 +112,7 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
     },
   },
   'src/prototype/protect.ts': {
-    sha256: 'd1f2c4871fa42617f7872347f1ccf37456e8c481d72c58cd7797a115ba2a471c',
+    sha256: '142bbad6b1f548eea60537d7f40c12f277676ef96d0f4574783ca0821b4ce327',
     imports: [],
     operations: {
       'assign:-=:index': 1,
@@ -134,9 +136,11 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
       'call:matchingRule:direct:1': 1,
       'call:new:RegExp.test:direct:1': 2,
       'call:protectDetectedSpans:direct:2': 1,
+      'call:protectSyntheticText:direct:1': 1,
       'call:protectedText.slice:direct:1': 1,
       'call:protectedText.slice:direct:2': 1,
       'call:protectedValueFor:direct:3': 1,
+      'call:protection.registry.clear:direct:0': 1,
       'call:registry.set:direct:2': 1,
       'call:rule.pattern.flags.replace:direct:2': 1,
       'call:runFailed:direct:1': 8,
@@ -149,6 +153,7 @@ const REVIEWED_PROTOTYPE_SOURCES: Readonly<Record<string, ReviewedSource>> = {
       'call:valuesByRawIdentifier.get:direct:1': 1,
       'call:valuesByRawIdentifier.set:direct:2': 2,
       'implicit:for-of:sync': 1,
+      'implicit:instanceof': 1,
       'implicit:spread:ArrayLiteralExpression': 2,
       'new:Error:1': 1,
       'new:Map:0': 3,

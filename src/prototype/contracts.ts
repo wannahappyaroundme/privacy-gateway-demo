@@ -1,4 +1,9 @@
 export const SUPPORTED_MOCK_BEHAVIORS = ['valid', 'mutate-marker'] as const;
+const SYNTHETIC_REQUEST_PURPOSE = /\] (?<purpose>.+)[을를] 요청했습니다\.$/u;
+
+export function extractSyntheticRequestPurpose(customerRequest: string): string | null {
+  return SYNTHETIC_REQUEST_PURPOSE.exec(customerRequest)?.groups?.purpose ?? null;
+}
 
 export type MockBehavior = (typeof SUPPORTED_MOCK_BEHAVIORS)[number];
 

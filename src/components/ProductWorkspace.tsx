@@ -1,7 +1,7 @@
 import type {DemoRuntimeView} from '../app/DemoRuntime';
 import {COPY} from '../content/copy';
 import type {RunSnapshot, RunStage} from '../prototype/run';
-import {detectSyntheticIdentifiers, protectSyntheticText} from '../prototype/protect';
+import {detectSyntheticIdentifiers, protectedTextForDisplay} from '../prototype/protect';
 import {BlockedResultPanel} from './BlockedResultPanel';
 import {EntityProtectionPanel} from './EntityProtectionPanel';
 import {EvidenceStatusTable} from './EvidenceStatusTable';
@@ -241,7 +241,8 @@ export function ProductWorkspace({view, manualOnly, onCaseChange}: ProductWorksp
   const state = productState(view);
   const run = view.timeline?.run ?? null;
   const detections = detectSyntheticIdentifiers(selectedCase.sourceText);
-  const protection = protectSyntheticText(selectedCase.sourceText);
+  const protectionVisible = run !== null && STAGE_INDEX[run.reachedStage] >= 1;
+  const protectedText = protectedTextForDisplay(selectedCase.sourceText, protectionVisible);
   const manual = !view.recordingMode && manualOnly;
   const manualStep = manual ? Math.max(1, STAGE_INDEX[run?.reachedStage ?? 'detected'] + 1) : null;
   const terminal = ['verified', 'request-blocked', 'response-withheld', 'recoverable'].includes(state);
@@ -296,7 +297,7 @@ export function ProductWorkspace({view, manualOnly, onCaseChange}: ProductWorksp
           onCaseChange={onCaseChange}
           onAction={primaryAction}
         />
-        <GatewayActivity state={state} run={run} protectedText={protection.protectedText} />
+        <GatewayActivity state={state} run={run} protectedText={protectedText} />
         <ResultWorkspace state={state} run={run} onNormal={normalCase} onAnother={nextCase} onRetry={view.actions.replay} />
       </div>
     </section>

@@ -1,4 +1,7 @@
-import type {MockBehavior} from '@/prototype/contracts';
+import {
+  extractSyntheticRequestPurpose,
+  type MockBehavior,
+} from '@/prototype/contracts';
 
 type MockSummary = Readonly<{
   purpose: string;
@@ -30,7 +33,7 @@ function createSummary(protectedText: string): MockSummary {
   const customerRequest = match?.groups?.customerRequest ?? '';
   const employeeGuidanceSource = match?.groups?.employeeGuidance ?? '';
   const employeeGuidance = REVIEWED_EMPLOYEE_GUIDANCE.has(employeeGuidanceSource) ? employeeGuidanceSource : '';
-  const purpose = customerRequest.match(/\] (?<purpose>.+) 요청했습니다\.$/u)?.groups?.purpose ?? '';
+  const purpose = extractSyntheticRequestPurpose(customerRequest) ?? '';
 
   return {
     purpose,

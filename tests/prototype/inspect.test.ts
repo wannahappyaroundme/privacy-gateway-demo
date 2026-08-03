@@ -12,7 +12,7 @@ const sourceText =
 const protectedText =
   '가상고객A님이 [합성_연락처_01]로 연락해 [합성_계좌_01] 자동이체 오류 확인과 처리 결과 안내를 요청했습니다. 직원은 내부 조회 후 처리 결과를 안내하겠다고 설명했습니다.';
 const protectedFields = {
-  purpose: '자동이체 오류 확인과 처리 결과 안내를',
+  purpose: '자동이체 오류 확인과 처리 결과 안내',
   customerRequest:
     '가상고객A님이 [합성_연락처_01]로 연락해 [합성_계좌_01] 자동이체 오류 확인과 처리 결과 안내를 요청했습니다.',
   employeeGuidance: '직원은 내부 조회 후 처리 결과를 안내하겠다고 설명했습니다.',
@@ -60,7 +60,7 @@ describe('full-response inspection and selective restoration', () => {
       outcome: 'VERIFIED',
       checks: CHECK_ORDER.map((code) => ({code, status: 'pass'})),
       verifiedFields: {
-        purpose: '자동이체 오류 확인과 처리 결과 안내를',
+        purpose: '자동이체 오류 확인과 처리 결과 안내',
         customerRequest:
           '가상고객-A님이 합성연락처-001로 연락해 합성계좌-001 자동이체 오류 확인과 처리 결과 안내를 요청했습니다.',
         employeeGuidance: '직원은 내부 조회 후 처리 결과를 안내하겠다고 설명했습니다.',

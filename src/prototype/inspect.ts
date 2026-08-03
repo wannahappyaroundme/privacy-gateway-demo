@@ -1,5 +1,7 @@
 import {z} from 'zod';
 
+import {extractSyntheticRequestPurpose} from '@/prototype/contracts';
+
 export const CHECK_ORDER = [
   'OUTPUT_SCHEMA',
   'MARKER_INTEGRITY',
@@ -109,7 +111,7 @@ function sourceGroundingIsApproved(fields: ProtectedSummary, sourceText: string,
   const sourceMatch = SUMMARY_SENTENCE.exec(protectedText);
   const customerRequest = sourceMatch?.groups?.customerRequest;
   const employeeGuidance = sourceMatch?.groups?.employeeGuidance;
-  const purpose = customerRequest?.match(/\] (?<purpose>.+) 요청했습니다\.$/u)?.groups?.purpose;
+  const purpose = extractSyntheticRequestPurpose(customerRequest ?? '');
 
   return (
     fields.purpose === purpose &&
